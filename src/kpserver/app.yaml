@@ -6,7 +6,7 @@ threadsafe: true
 
 handlers:
 - url: /android_assets
-  static_dir: ../../assets
+  static_dir: assets
 
 - url: /.*
   script: kidspointsbeta.app
