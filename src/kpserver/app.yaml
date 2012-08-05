@@ -1,0 +1,12 @@
+application: kidspointsbeta
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /android_assets
+  static_dir: ../../assets
+
+- url: /.*
+  script: kidspointsbeta.app
