@@ -21,6 +21,8 @@ th {
 
 #homepage {
 	background-image: url('images/johnny_automatic_girl_and_boy.gif');
+	background-size:contain;
+	background-repeat:no-repeat;
 	text-align:center;
 }
 

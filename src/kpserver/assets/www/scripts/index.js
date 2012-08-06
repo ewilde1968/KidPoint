@@ -374,43 +374,26 @@ $(document).bind('mobileinit', function() {
 	
 	$('#details_portraitImg').live('vclick', function( event, ui) {
 		if( navigator && navigator.camera) {
-			alert( 'found navigator.camera');
-			var onSuccess = function(imageURI) {
-				alert( 'success');
-			    var kid = getKidData();
-				if( kid && kid.imageURL != imageURI) {
-					alert( imageURI);
-					$('#details_portraitImg').prop('src', imageURI)
-				    kid.imageURL = imageURI;
+			navigator.camera.getPicture( function(imageURI) {
+				    var kid = getKidData();
+					if( kid && kid.imageURL != imageURI) {
+						$('#details_portraitImg').prop('src', imageURI)
+				    	kid.imageURL = imageURI;
 				    
-				    // TODO - store image someplace where it can be shared on devices
+					    // TODO - store image someplace where it can be shared on devices
 				    
-				    queuePost();
-				}				
-			    
-				/* TODO - Uncomment this when supporting iOS
-			    if( navigator.camera.cleanup)
-			    	navigator.camera.cleanup( function() {}, function() {});*/
-			}
-
-			alert( 'defined onSuccess');
-			var onFail = function(message) {
- 			   alert('Failed because: ' + message);
-			}
-			alert( 'defined onFail');
-		
-			navigator.camera.getPicture(onSuccess, onFail, { quality: 100, 
-															 destinationType: Camera.DestinationType.FILE_URI
-															 }); 
-			alert( 'returned from getPicture');
-		} else {
-		    var kid = getKidData();
-			imageURI='stylesheets/images/johnny_automatic_girl_and_boy.gif';
-			$('#details_portraitImg').prop('src', imageURI);
-			kid.imageURL = imageURI;
-				    
-			console.log(imageURI);
-			alert( "image at " + imageURI);
+					    queuePost();
+					}				
+    
+					/* TODO - Uncomment this when supporting iOS
+				    if( navigator.camera.cleanup)
+				    	navigator.camera.cleanup( function() {}, function() {});*/
+				},  function(message) {
+ 			   		alert('Failed because: ' + message);
+				}, { sourceType: Camera.PictureSourceType.PHOTOLIBRARY,
+					 destinationType: Camera.DestinationType.FILE_URI
+				}
+			);	// close getPicture 
 		}
 	});
 	
