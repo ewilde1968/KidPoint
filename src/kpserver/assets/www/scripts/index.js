@@ -4,7 +4,7 @@ $(document).bind('mobileinit', function() {
 	var ajaxQueue = $({});
 	var localURL = 'http://localhost:8082/account'
 	var remoteURL = 'http://kidspointsbeta.appspot.com/account'
-	var rootURL = localURL
+	var rootURL = remoteURL
 
 	var postAccount = function(next) {
 		// may have already had an item in the delay interval when last queued
@@ -163,8 +163,8 @@ $(document).bind('mobileinit', function() {
 						$('#err_servermsg').text(responseData.errorMsg);
 						$.mobile.changePage( $('#errdialog'));
 					} else {
-					setAccountData( responseData);
-					$.mobile.changePage( $('#homepage'));
+						setAccountData( responseData);
+						$.mobile.changePage( $('#homepage'));
 					}
 				});
 		}
@@ -178,6 +178,7 @@ $(document).bind('mobileinit', function() {
 	$('#loginpage').live('pagebeforeshow', function() {
 		$('#login_addr').val( '');
 		$('#login_pwd').val( '');
+		$('#login_errtext').addClass('login_hidden');
 	});
 	$('#createaccountpage').live('pagebeforeshow', function() {
 		$('#create_addr').val( '');
@@ -373,29 +374,43 @@ $(document).bind('mobileinit', function() {
 	
 	$('#details_portraitImg').live('vclick', function( event, ui) {
 		if( navigator && navigator.camera) {
+			alert( 'found navigator.camera');
 			var onSuccess = function(imageURI) {
+				alert( 'success');
 			    var kid = getKidData();
-				if( kid.imageURL != imageURI) {
-				    var image = document.getElementById('details_portraitImg');
-				    image.src = imageURI;
+				if( kid && kid.imageURL != imageURI) {
+					alert( imageURI);
+					$('#details_portraitImg').prop('src', imageURI)
 				    kid.imageURL = imageURI;
-
+				    
 				    // TODO - store image someplace where it can be shared on devices
 				    
 				    queuePost();
 				}				
 			    
+				/* TODO - Uncomment this when supporting iOS
 			    if( navigator.camera.cleanup)
-			    	navigator.camera.cleanup( function() {}, function() {});
+			    	navigator.camera.cleanup( function() {}, function() {});*/
 			}
 
+			alert( 'defined onSuccess');
 			var onFail = function(message) {
  			   alert('Failed because: ' + message);
 			}
+			alert( 'defined onFail');
 		
 			navigator.camera.getPicture(onSuccess, onFail, { quality: 100, 
 															 destinationType: Camera.DestinationType.FILE_URI
 															 }); 
+			alert( 'returned from getPicture');
+		} else {
+		    var kid = getKidData();
+			imageURI='stylesheets/images/johnny_automatic_girl_and_boy.gif';
+			$('#details_portraitImg').prop('src', imageURI);
+			kid.imageURL = imageURI;
+				    
+			console.log(imageURI);
+			alert( "image at " + imageURI);
 		}
 	});
 	
