@@ -25,6 +25,6 @@ if __name__ == '__main__':
 
     # model tests
     SDK_PATH = '/usr/local/google_appengine'
-    TEST_PATH = 'unittests'
+    TEST_PATH = 'src/kpserver/unittests'
     main(SDK_PATH, TEST_PATH)
     

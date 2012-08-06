@@ -4,7 +4,7 @@ $(document).bind('mobileinit', function() {
 	var ajaxQueue = $({});
 	var localURL = 'http://localhost:8082/account'
 	var remoteURL = 'http://kidspointsbeta.appspot.com/account'
-	var rootURL = remoteURL
+	var rootURL = localURL
 
 	var postAccount = function(next) {
 		// may have already had an item in the delay interval when last queued
