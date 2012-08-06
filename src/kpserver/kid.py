@@ -17,7 +17,7 @@ class Kid(db.Model):
     '''
     kidName = db.StringProperty(required=True)
     events = db.ListProperty(db.Key)
-    imageURL = db.URLProperty()
+    imageURL = db.StringProperty()
 
     def getJSONDict(self):
         outputDict = { 'kidName': self.kidName, 'imageURL':self.imageURL, 'key':self.key().id()}

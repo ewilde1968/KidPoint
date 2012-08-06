@@ -267,6 +267,10 @@ $(document).bind('mobileinit', function() {
 		$('#home_childDDL').val( kid.kidName);
 		$('#home_childDDL').selectmenu('refresh');
 		$('#home_totalL').html( getKidTotal(kid));
+		
+		// background-image: url('images/johnny_automatic_girl_and_boy.gif');
+		if( kid.imageURL && kid.imageURL.length > 2)
+			$('#homepage').css( 'background-image', 'url("' + kid.imageURL + '")');
 	}
 	
 	/*
@@ -364,6 +368,34 @@ $(document).bind('mobileinit', function() {
 				setKidData( newKid);
 				setDetailsWidgets();
 			}
+		}
+	});
+	
+	$('#details_portraitImg').live('vclick', function( event, ui) {
+		if( navigator && navigator.camera) {
+			var onSuccess = function(imageURI) {
+			    var kid = getKidData();
+				if( kid.imageURL != imageURI) {
+				    var image = document.getElementById('details_portraitImg');
+				    image.src = imageURI;
+				    kid.imageURL = imageURI;
+
+				    // TODO - store image someplace where it can be shared on devices
+				    
+				    queuePost();
+				}				
+			    
+			    if( navigator.camera.cleanup)
+			    	navigator.camera.cleanup( function() {}, function() {});
+			}
+
+			var onFail = function(message) {
+ 			   alert('Failed because: ' + message);
+			}
+		
+			navigator.camera.getPicture(onSuccess, onFail, { quality: 100, 
+															 destinationType: Camera.DestinationType.FILE_URI
+															 }); 
 		}
 	});
 	
