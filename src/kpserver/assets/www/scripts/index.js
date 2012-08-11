@@ -392,14 +392,39 @@ $(document).bind('mobileinit', function() {
 		}
 	});
 	
+	var uploadImage = function(obj) {
+		var options = {
+			clearForm: true,
+			success: function(response, status, xhr, fe) {
+				var kid = getKidData();
+				if( response.kidName == kid.kidName)
+					setKidData( response)
+
+				// clean up
+				if( navigator && navigator.camera) {
+				
+				} else {
+					$.mobile.changePage( $('#detailspage'));
+				}
+			}
+		};
+		obj.ajaxSubmit(options);
+	}
+	
 	var GetPicture = function() {
 		if( navigator && navigator.camera) {
 			navigator.camera.getPicture( function(imageURI) {
-				if( kid && kid.imageBlobKey != imageURI) {
-					$('#details_portraitImg').prop('src', imageURI)
-			    	kid.imageBlobKey = imageURI;
-				    
-				    // TODO - store image someplace where it can be shared on devices
+				var kid = getKidData();
+				if( kid && imageURI) {
+					var acct = getAccountData();
+
+					var str = '<form action="/imagestore" method="post" enctype="multipart/form-data" id="browse_upload" data-ajax="false">';
+					str +=	  '    <input type="file" name="file" value="' + imageURI + '" />';
+					str +=	  '    <input type="text" name="kid" value="' + (kid.key ? kid.key : kid.kidName) + '" />';
+					str +=	  '    <input type="text" name="account" value="' + acct.address + '" />';
+					str +=    '</form>';
+					var f = $(str);
+					uploadImage(f);
 				    
 				    queuePost();
 				}				
@@ -445,22 +470,7 @@ $(document).bind('mobileinit', function() {
 	 * 
 	 */
 	$('#browse_submit').live( 'click', function(e) {
-		var options = {
-			clearForm: true,
-			success: function(response, status, xhr, fe) {
-				var kid = getKidData();
-				if( response.kidName == kid.kidName)
-					setKidData( response)
-
-				// clean up
-				if( navigator && navigator.camera) {
-				
-				} else {
-					$.mobile.changePage( $('#detailspage'));
-				}
-			}
-		};
-		$('#browse_upload').ajaxSubmit(options);
+		uploadImage( $('#browse_upload'));
 		e.preventDefault();
 	});
 });
