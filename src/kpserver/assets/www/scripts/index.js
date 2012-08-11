@@ -4,7 +4,7 @@ $(document).bind('mobileinit', function() {
 	var ajaxQueue = $({});
 	var localURL = 'http://localhost:8082/';
 	var remoteURL = 'http://kidspointsbeta.appspot.com/';
-	var rootURL = localURL;
+	var rootURL = remoteURL;
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	
@@ -416,29 +416,30 @@ $(document).bind('mobileinit', function() {
 			navigator.camera.getPicture( function(imageURI) {
 				var kid = getKidData();
 				if( kid && imageURI) {
-					var acct = getAccountData();
-
-					var str = '<form action="/imagestore" method="post" enctype="multipart/form-data" id="browse_upload" data-ajax="false">';
-					str +=	  '    <input type="file" name="file" value="' + imageURI + '" />';
-					str +=	  '    <input type="text" name="kid" value="' + (kid.key ? kid.key : kid.kidName) + '" />';
-					str +=	  '    <input type="text" name="account" value="' + acct.address + '" />';
-					str +=    '</form>';
-					var f = $(str);
-					uploadImage(f);
-				    
-				    queuePost();
-				}				
+					var options = new FileUploadOptions();
+					options.params = {
+						'account': getAccountData().address,
+						'kid': kid.key ? kid.key : kid.kidName
+					};
+					
+					var ft = new FileTransfer();
+					ft.upload( imageURI, encodeURI('/imagestore'),
+						function(r) {
+						    queuePost();
+						},
+						function(error) {
+							alert('unable to upload:' + error);
+						},
+						options);
+				}
     
-				/* TODO - Uncomment this when supporting iOS
 			    if( navigator.camera.cleanup)
-			    	navigator.camera.cleanup( function() {}, function() {});*/
+			    	navigator.camera.cleanup( function() {}, function() {});
 			},  function(message) {
  		   		alert('Failed because: ' + message);
 			}, { sourceType: Camera.PictureSourceType.PHOTOLIBRARY,
 				 destinationType: Camera.DestinationType.FILE_URI
-			});	// close getPicture
-			
-			// now upload the data - TODO
+			});
 		} else {
 			// in webapp so browse for file to upload, first get URL
 			if( getKidData().key)
