@@ -35,12 +35,10 @@ class DemoTestCase(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertEqual( result.kidName, kidName)
-        self.assertEqual( result.imageURL, imageURL)
 
     def testGetKid(self):
         kidName = "Leia"
-        imageURL = "http://miggle.biggle.com/myfoofyimage.jpg"
-        k = kid.Kid(kidName=kidName,imageURL=imageURL)
+        k = kid.Kid(kidName=kidName)
         k.put()
         
         result = db.get( k.key())
@@ -48,7 +46,6 @@ class DemoTestCase(unittest.TestCase):
         # test the account values
         self.assertIsNotNone(result)
         self.assertEqual( result.kidName, kidName)
-        self.assertEqual( result.imageURL, imageURL)
         
         # test the json encoder
         resultStr = k.toJSON()
@@ -56,7 +53,6 @@ class DemoTestCase(unittest.TestCase):
         result = json.JSONDecoder(object_hook=kid.fromJSON).decode(resultStr)
         self.assertIsNotNone(result)
         self.assertEqual( result.kidName, kidName)
-        self.assertEqual( result.imageURL, imageURL)
 
     def testGetKidWithEvents(self):
         # mimic the POST data from the client's account creation page
@@ -73,7 +69,6 @@ class DemoTestCase(unittest.TestCase):
         result = db.get(kr.key())
         self.assertIsNotNone(result)
         self.assertEqual( result.kidName, kidName)
-        self.assertEqual( result.imageURL, imageURL)
         
 
 if __name__ == '__main__':

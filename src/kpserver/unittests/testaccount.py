@@ -85,12 +85,10 @@ class DemoTestCase(unittest.TestCase):
         result = db.get( result.kids[0])
         self.assertIsNotNone(result)
         self.assertEqual( result.kidName, kidName)
-        self.assertEqual( result.imageURL, imageURL)
 
     
     def testAccountAddPointsToKid(self):
         kidName = 'Alisa'
-        imageURL = 'http://miggle.biggle.com/myfoofyimage.jpg'
         addr = "test@tester.com"
         pwd = "dummypwd"
         points0 = 1
@@ -101,7 +99,7 @@ class DemoTestCase(unittest.TestCase):
         pe1 = pointevent.PointEvent( points = points1)
         pe1.put()
         pl = [ pe0.key(), pe1.key()]
-        k = kid.Kid( kidName=kidName, imageURL=imageURL, events=pl)
+        k = kid.Kid( kidName=kidName, events=pl)
         k.put()
         kl = [ k.key() ]
         a = account.Account( address=addr, password=pwd, kids=kl)
@@ -121,7 +119,6 @@ class DemoTestCase(unittest.TestCase):
         result = db.get( result.kids[0])
         self.assertIsNotNone(result)
         self.assertEqual( result.kidName, kidName)
-        self.assertEqual( result.imageURL, imageURL)
         self.assertIsNotNone( result.events)
         self.assertEqual( len(result.events), 3)
 

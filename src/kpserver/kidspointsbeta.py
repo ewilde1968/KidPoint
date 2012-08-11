@@ -1,6 +1,7 @@
 import webapp2
 
 import accountpage
+import imagestorepage
 
 
 class HomePage(webapp2.RequestHandler):
@@ -12,6 +13,7 @@ class HomePage(webapp2.RequestHandler):
 
   
 app = webapp2.WSGIApplication([('/account', accountpage.AccountPage),
+                               ('/imagestore', imagestorepage.ImageStorePage),
                                ('/', HomePage)
                                ],
                               debug=True)

@@ -18,6 +18,7 @@
 -->
 	<script src="scripts/index.js"></script>
 	<script src="scripts/jquery.mobile-1.1.1.min.js"></script>
+	<script src="scripts/jquery.form.js"></script>
 	</head>
 <body>
 
@@ -106,10 +107,10 @@
 
 	<div data-role="header">
 		<h3></h3>
-		<a href="#settingspage" data-role="button" data-icon="gear" data-mini="true" class="ui-btn-right" id="home_settingsB">settings</a>
 	</div><!-- /header -->
 
 	<div data-role="content">
+		<img src="stylesheets/images/johnny_automatic_girl_and_boy.gif" id="home_portraitImg" />
 		<div class="home_childDDLDiv">
 			<label for="home_childDDL" class="ui-hidden-accessible">child name</label>
 			<select id="home_childDDL" name="home_childDDL" data-mini="true" data-native-menu ="false">
@@ -142,11 +143,28 @@
 		</div>
 		<img src="stylesheets/images/camera.png" id="details_portraitImg" alt="tap" />
 		<label id="details_totalL" class="details_totalL">00</label>
-		<!-- TODO: generate chart -->
-		<img src="stylesheets/images/1289683647.png" id="details_weekImg" alt="week details" />
-		<!-- TODO: goal setting -->
-		<a href="#goalspage" data-role="button" data-icon="star" data-mini="true"
-			enabled="false" data-inline="true" id="details_goalB">set goal</a>
+	</div><!-- /content -->
+
+</div><!-- /page -->
+
+<!-- BROWSEPAGE definition -->
+
+<div data-role="dialog" id="browsedialog">
+
+	<div data-role="header">
+		<h3>browse for portrait</h3>
+	</div><!-- /header -->
+
+	<div data-role="content">
+		<form action="/imagestore" method="post" enctype="multipart/form-data" id="browse_upload" data-ajax="false">
+			<div data-role="fieldcontain">
+				<label for="browse_fileInput">filename:</label>
+				<input type="file" name="file" id="browse_fileInput" data-mini="true" />
+			</div>
+			<input type="text" name="kid" id="browse_kid" class="nodisplay" />
+			<input type="text" name="account" id="browse_account" class="nodisplay" />
+	        <input type="button" value="upload" id="browse_submit" data-mini="true" />
+		</form>
 	</div><!-- /content -->
 
 </div><!-- /page -->

@@ -4,6 +4,7 @@ Created on Jul 31, 2012
 @author: ewilde
 '''
 from google.appengine.ext import db
+from google.appengine.api import images
 
 import json
 
@@ -17,10 +18,13 @@ class Kid(db.Model):
     '''
     kidName = db.StringProperty(required=True)
     events = db.ListProperty(db.Key)
-    imageURL = db.StringProperty()
+    imageBlob = db.BlobProperty()
+    thumbnail = db.BlobProperty()
 
     def getJSONDict(self):
-        outputDict = { 'kidName': self.kidName, 'imageURL':self.imageURL, 'key':self.key().id()}
+        outputDict = { 'kidName': self.kidName, 'key':self.key().id()}
+        if self.imageBlob:
+            outputDict['hasImage'] = True
 
         if self.events and len(self.events) > 0:
             outputDict['events'] = []
@@ -34,6 +38,11 @@ class Kid(db.Model):
         result = json.dumps(outputDict)
         return result
     
+    def setImage(self, imageH):
+        self.imageBlob = db.Blob( imageH)
+        self.thumbnail = db.Blob( images.resize(imageH, 80, 120))
+        self.put()
+
 
 def getKidByName( nm):
     q = Kid.all()
@@ -84,9 +93,7 @@ def fromJSON( jo):
             result.touched = True
 
         # result must be created by this time
-        if 'imageURL' in jo and jo['imageURL'] != result.imageURL:
-            result.imageURL = jo['imageURL']
-            result.touched = True
+        # image blob handled through imagestorepage API
 
         if 'events' in jo:
             # any events passed into the JSON string must be new ones

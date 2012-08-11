@@ -2,9 +2,44 @@ $(document).bind('mobileinit', function() {
 	var accountData = null;
 	var chosenKidData = null;
 	var ajaxQueue = $({});
-	var localURL = 'http://localhost:8082/account'
-	var remoteURL = 'http://kidspointsbeta.appspot.com/account'
-	var rootURL = remoteURL
+	var localURL = 'http://localhost:8082/';
+	var remoteURL = 'http://kidspointsbeta.appspot.com/';
+	var rootURL = localURL;
+	var accountURL = rootURL + 'account';
+	var imagestoreURL = rootURL + 'imagestore';
+	
+	var setAccountData = function( acctData) {
+		accountData = acctData;
+	}
+	
+	var getAccountData = function() {
+		return accountData;
+	}
+
+	var setKidData = function( kid) {
+		chosenKidData = kid;
+		acct = getAccountData();
+		
+		// fetch the portrait data for background and icons
+		if( kid.hasImage)
+			setImageWidgets( kid);
+	}
+	
+	var getKidData = function() {
+		return chosenKidData;
+	}
+
+	var setDefaultKidData = function() {
+		// set default kid data
+		acctData = getAccountData();
+		
+		if( acctData.kids) {
+			if( acctData.kids.length > 1)
+				setKidData( acctData.kids[1]);
+			else
+				setKidData( acctData.kids[0]);
+		}
+	}
 
 	var postAccount = function(next) {
 		// may have already had an item in the delay interval when last queued
@@ -21,7 +56,7 @@ $(document).bind('mobileinit', function() {
 			
 			$.each(acctData.kids, function(i,k) {
 				kid = { 'kidName':k.kidName,
-						'imageURL':k.imageURL,
+						'imageBlobKey':k.imageBlobKey,
 						'key':k.key
 					};
 				if( 'newPoints' in k && k.newPoints > 0)
@@ -31,7 +66,7 @@ $(document).bind('mobileinit', function() {
 				k.newPoints = 0;
 			});
 			
-			$.post( rootURL, JSON.stringify(outData),
+			$.post( accountURL, JSON.stringify(outData),
 				function(responseData,status,xhr) {
 					/*
 					 * All responses in JSON. Possible response objects include:
@@ -41,7 +76,7 @@ $(document).bind('mobileinit', function() {
 					 * 
 					 * account object:
 					 * 		address: email address for account
-					 * 		password: password for account - TODO: rethink security
+					 * 		password: password for account
 					 * 		kids: array of Kid objects
 					 */
 					if( "errorMsg" in responseData) {
@@ -96,7 +131,7 @@ $(document).bind('mobileinit', function() {
 				"address": acctAddr,
 				"password": pwd
 		}
-		$.getJSON( rootURL, dataOut,
+		$.getJSON( accountURL, dataOut,
 			function( responseData, status, xfr) {
 				/*
 				 * All responses in JSON. Possible response objects include:
@@ -145,7 +180,7 @@ $(document).bind('mobileinit', function() {
 					"password": pwd,
 					"create": true
 			});
-			$.post( rootURL, dataOut,
+			$.post( accountURL, dataOut,
 				function(responseData,status,xhr) {
 					/*
 					 * All responses in JSON. Possible response objects include:
@@ -200,38 +235,6 @@ $(document).bind('mobileinit', function() {
 		setHomePageWidgets();
 	});
 	
-	var setAccountData = function( acctData) {
-		accountData = acctData;
-//		$('div#homepage').jqmData('account', acctData);
-	}
-	
-	var getAccountData = function() {
-		return accountData;
-//		return $('div#homepage').jqmData('account');
-	}
-
-	var setKidData = function( kid) {
-		chosenKidData = kid;
-//		$('div#homepage').jqmData('kid', kid);
-	}
-	
-	var getKidData = function() {
-		return chosenKidData;
-//		return $('div#homepage').jqmData('kid');
-	}
-
-	var setDefaultKidData = function() {
-		// set default kid data
-		acctData = getAccountData();
-		
-		if( acctData.kids) {
-			if( acctData.kids.length > 1)
-				setKidData( acctData.kids[1]);
-			else
-				setKidData( acctData.kids[0]);
-		}
-	}
-	
 	var createKidList = function() {
 		var acctData = getAccountData();
 		
@@ -268,10 +271,27 @@ $(document).bind('mobileinit', function() {
 		$('#home_childDDL').val( kid.kidName);
 		$('#home_childDDL').selectmenu('refresh');
 		$('#home_totalL').html( getKidTotal(kid));
-		
-		// background-image: url('images/johnny_automatic_girl_and_boy.gif');
-		if( kid.imageURL && kid.imageURL.length > 2)
-			$('#homepage').css( 'background-image', 'url("' + kid.imageURL + '")');
+	}
+	
+	var getImageURL = function( kid, thumbnail) {
+		var url = imagestoreURL + '?account="' + acct.address + '"&kid=';
+			
+		if( kid.key)
+			url += kid.key;
+		else
+			url += '"' + kid.kidName + '"';
+
+		if( thumbnail)
+			url += '&thumb="true"';
+		else
+			url += '&thumb="false"';
+			
+		return url;
+	}
+	
+	var setImageWidgets = function( kid) {
+		$('#home_portraitImg').prop('src', getImageURL(kid, false));
+		$('#details_portraitImg').prop('src', getImageURL(kid, true));
 	}
 	
 	/*
@@ -372,37 +392,75 @@ $(document).bind('mobileinit', function() {
 		}
 	});
 	
-	$('#details_portraitImg').live('vclick', function( event, ui) {
+	var GetPicture = function() {
 		if( navigator && navigator.camera) {
 			navigator.camera.getPicture( function(imageURI) {
-				    var kid = getKidData();
-					if( kid && kid.imageURL != imageURI) {
-						$('#details_portraitImg').prop('src', imageURI)
-				    	kid.imageURL = imageURI;
+				if( kid && kid.imageBlobKey != imageURI) {
+					$('#details_portraitImg').prop('src', imageURI)
+			    	kid.imageBlobKey = imageURI;
 				    
-					    // TODO - store image someplace where it can be shared on devices
+				    // TODO - store image someplace where it can be shared on devices
 				    
-					    queuePost();
-					}				
+				    queuePost();
+				}				
     
-					/* TODO - Uncomment this when supporting iOS
-				    if( navigator.camera.cleanup)
-				    	navigator.camera.cleanup( function() {}, function() {});*/
-				},  function(message) {
- 			   		alert('Failed because: ' + message);
-				}, { sourceType: Camera.PictureSourceType.PHOTOLIBRARY,
-					 destinationType: Camera.DestinationType.FILE_URI
-				}
-			);	// close getPicture 
+				/* TODO - Uncomment this when supporting iOS
+			    if( navigator.camera.cleanup)
+			    	navigator.camera.cleanup( function() {}, function() {});*/
+			},  function(message) {
+ 		   		alert('Failed because: ' + message);
+			}, { sourceType: Camera.PictureSourceType.PHOTOLIBRARY,
+				 destinationType: Camera.DestinationType.FILE_URI
+			});	// close getPicture
+			
+			// now upload the data - TODO
+		} else {
+			// in webapp so browse for file to upload, first get URL
+			if( getKidData().key)
+				$('#browse_kid').val( getKidData().key);
+			else
+				$('#browse_kid').val( getKidData().kidName);
+				
+			$('#browse_account').val( getAccountData().key);
+			
+			$.mobile.changePage( $('#browsedialog'));
 		}
+	}
+	
+	$('#details_portraitImg').live('vclick', function( event, ui) {
+		GetPicture();
 	});
 	
 	var setDetailsWidgets = function() {
 		var kid = getKidData();
 		
 		$('#details_name').val( kid.kidName);
-		if( kid.imageURL && kid.imageURL.length > 10)
-			$('#details_portraitImg').prop('src', kid.imageURL);
 		$('#details_totalL').html( getKidTotal(kid));
+		
+		// kid portrait image is set in setImageWidgets
 	}
+	
+	/*
+	 * BROWSEDIALOG initialization and widget events
+	 * 
+	 */
+	$('#browse_submit').live( 'click', function(e) {
+		var options = {
+			clearForm: true,
+			success: function(response, status, xhr, fe) {
+				var kid = getKidData();
+				if( response.kidName == kid.kidName)
+					setKidData( response)
+
+				// clean up
+				if( navigator && navigator.camera) {
+				
+				} else {
+					$.mobile.changePage( $('#detailspage'));
+				}
+			}
+		};
+		$('#browse_upload').ajaxSubmit(options);
+		e.preventDefault();
+	});
 });
