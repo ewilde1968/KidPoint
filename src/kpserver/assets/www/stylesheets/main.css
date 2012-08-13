@@ -23,17 +23,23 @@ th {
 	text-align:center;
 }
 
-.home_totalLDiv {
-	width:100%;
-	font-size:6em;
-}
-
 #home_detailsB {
 	position:absolute; right:10px;
 }
 
-#home_bonusBG {
-	position:absolute; bottom:10px; left:30%;
+.home_bottomrow {
+	position:absolute; bottom:10px;
+	width:100%;
+}
+
+#home_totalL {
+	font-size:5em;
+	float:left;
+	width:40%;
+}
+
+#home_bonus {
+	position:relative; top:1.4em;
 }
 
 #home_portraitImg {

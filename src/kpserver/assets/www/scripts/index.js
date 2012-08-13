@@ -9,7 +9,9 @@ $(document).bind('mobileinit', function() {
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
 	
-	var isPhone = navigator && navigator.camera;
+	var isPhone = function() {
+		return navigator && navigator.camera;
+	}
 
 	var setAccountData = function( acctData) {
 		accountData = acctData;
@@ -392,7 +394,7 @@ $(document).bind('mobileinit', function() {
 	});
 	
 	var GetPicture = function( uploadURL) {
-		if( isPhone) {
+		if( isPhone()) {
 			navigator.camera.getPicture( function(imageURI) {
 				var kid = getKidData();
 				if( kid && imageURI) {
@@ -401,13 +403,10 @@ $(document).bind('mobileinit', function() {
 						'account': getAccountData().address,
 						'kid': kid.key ? kid.key : kid.kidName
 					};
-					options.mimeType = 'image/jpeg';
 					
 					var ft = new FileTransfer();
 					ft.upload( imageURI, encodeURI(imagestoreURL),
-						function(r) {
-						    queuePost();
-						},
+						function(r) {},
 						function(error) {
 							alert('unable to upload: ' + error.source + ' error code: ' + error.code);
 						},
