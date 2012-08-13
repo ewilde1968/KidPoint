@@ -7,7 +7,10 @@ $(document).bind('mobileinit', function() {
 	var rootURL = remoteURL;
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
+	var blobstoreURL = rootURL + 'blobstore';
 	
+	var isPhone = navigator && navigator.camera;
+
 	var setAccountData = function( acctData) {
 		accountData = acctData;
 	}
@@ -20,9 +23,10 @@ $(document).bind('mobileinit', function() {
 		chosenKidData = kid;
 		acct = getAccountData();
 		
-		// fetch the portrait data for background and icons
-		if( kid.hasImage)
-			setImageWidgets( kid);
+		if( $.mobile.activePage == $('#homepage'))
+			setHomePageWidgets();
+		else if( $.mobile.activePage == $('#detailspage'))
+			setDetailsWidgets();
 	}
 	
 	var getKidData = function() {
@@ -40,7 +44,7 @@ $(document).bind('mobileinit', function() {
 				setKidData( acctData.kids[0]);
 		}
 	}
-
+	
 	var postAccount = function(next) {
 		// may have already had an item in the delay interval when last queued
 		// only implement when this is the very last
@@ -262,12 +266,13 @@ $(document).bind('mobileinit', function() {
 	 * Get the kid setting of the homepage select element and fetch the
 	 * corresponding kid data from it. Then set the total points and
 	 * background image appropriately.
-	 *  
-	 * Input: account object
 	 */
-	var setHomePageWidgets = function( inData) {
+	var setHomePageWidgets = function() {
 		kid = getKidData();
 		
+		if( kid.hasImage)
+			$('#home_portraitImg').prop('src', getImageURL(kid, false));
+
 		$('#home_childDDL').val( kid.kidName);
 		$('#home_childDDL').selectmenu('refresh');
 		$('#home_totalL').html( getKidTotal(kid));
@@ -282,16 +287,11 @@ $(document).bind('mobileinit', function() {
 			url += '"' + kid.kidName + '"';
 
 		if( thumbnail)
-			url += '&thumb="true"';
+			url += '&height=120&width=80';
 		else
-			url += '&thumb="false"';
+			url += '&height=' + $(window).height() + '&width=' + $(window).width();
 			
 		return url;
-	}
-	
-	var setImageWidgets = function( kid) {
-		$('#home_portraitImg').prop('src', getImageURL(kid, false));
-		$('#details_portraitImg').prop('src', getImageURL(kid, true));
 	}
 	
 	/*
@@ -344,8 +344,6 @@ $(document).bind('mobileinit', function() {
 			if( acctData && acctData.kids)
 				acctData.kids.forEach( function(e,i,a) {if( e.kidName == kidName) kid = e});
 			setKidData( kid);
-			
-			setHomePageWidgets()
 		}
 	});
 
@@ -381,6 +379,7 @@ $(document).bind('mobileinit', function() {
 					kid.newPoints = 0;	// reset the "new" kid to be a fresh kid
 					acctData.kids.push( newKid);
 					setKidData( newKid);
+					setDetailsWidgets();
 				} else
 					kid.kidName = newName;
 
@@ -392,22 +391,8 @@ $(document).bind('mobileinit', function() {
 		}
 	});
 	
-	var uploadImage = function(obj) {
-		var options = {
-			clearForm: true,
-			success: function(response, status, xhr, fe) {
-				var kid = getKidData();
-				if( response.kidName == kid.kidName)
-					setKidData( response)
-
-				$.mobile.changePage( $('#detailspage'));
-			}
-		};
-		obj.ajaxSubmit(options);
-	}
-	
-	var GetPicture = function() {
-		if( navigator && navigator.camera) {
+	var GetPicture = function( uploadURL) {
+		if( isPhone) {
 			navigator.camera.getPicture( function(imageURI) {
 				var kid = getKidData();
 				if( kid && imageURI) {
@@ -416,6 +401,7 @@ $(document).bind('mobileinit', function() {
 						'account': getAccountData().address,
 						'kid': kid.key ? kid.key : kid.kidName
 					};
+					options.mimeType = 'image/jpeg';
 					
 					var ft = new FileTransfer();
 					ft.upload( imageURI, encodeURI(imagestoreURL),
@@ -444,12 +430,31 @@ $(document).bind('mobileinit', function() {
 				
 			$('#browse_account').val( getAccountData().key);
 			
+			$('#browse_upload').prop( 'action', uploadURL)
+			
 			$.mobile.changePage( $('#browsedialog'));
 		}
 	}
 	
 	$('#details_portraitImg').live('vclick', function( event, ui) {
-		GetPicture();
+		/* Store image data in the blobstore as many images come from a smartphone
+		 * camera, whose default images are often well over a megabyte and so break
+		 * the GAE blob limit. The GAE image service can still be used to resize
+		 * the image upon load.
+		 * 
+		 * Steps to use the Blobstore for posting:
+		 *   Get the URL for posting the blob when the avatar is tapped
+		 *   Get selection from the phone's gallery or harddrive on a webapp
+		 *   Upload the image to the blobstore, saving the key under the Kid object
+		 * 
+		 */
+		$.getJSON( blobstoreURL, function(data) {
+			// data is a JSON object with the upload URL as uploadURL
+			uploadURL = data.uploadURL;
+			
+			// now get the selection from the phone
+			GetPicture( uploadURL); // also uploads
+		});
 	});
 	
 	var setDetailsWidgets = function() {
@@ -458,7 +463,8 @@ $(document).bind('mobileinit', function() {
 		$('#details_name').val( kid.kidName);
 		$('#details_totalL').html( getKidTotal(kid));
 		
-		// kid portrait image is set in setImageWidgets
+		if( kid.hasImage)
+			$('#details_portraitImg').prop('src', getImageURL(kid, true));
 	}
 	
 	/*
@@ -466,7 +472,18 @@ $(document).bind('mobileinit', function() {
 	 * 
 	 */
 	$('#browse_submit').live( 'click', function(e) {
-		uploadImage( $('#browse_upload'));
+		var options = {
+			clearForm: true,
+			success: function(response, status, xhr, fe) {
+				var kid = getKidData();
+				if( response.kidName == kid.kidName)
+					setKidData( response)
+
+				$.mobile.changePage( $('#detailspage'));
+			}
+		};
+		$('#browse_upload').ajaxSubmit(options);
+
 		e.preventDefault();
 	});
 });

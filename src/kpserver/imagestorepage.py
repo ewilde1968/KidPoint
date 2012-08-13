@@ -6,6 +6,10 @@ Created on Aug 6, 2012
 import webapp2
 import logging
 
+from google.appengine.api import images
+from google.appengine.ext import blobstore
+from google.appengine.ext.webapp import blobstore_handlers
+
 import kid
 
 
@@ -28,13 +32,30 @@ class ImageStorePage(webapp2.RequestHandler):
             except:
                 k = kid.getKidByName(kInfo)
 
+            if not k:
+                raise ImageStoreError( 'no Kid data available')
+
             if k.imageBlob:
-                self.response.headers['Content-Type'] = "image/png"
-                
-                if self.request.get('thumb') == 'true':
-                    self.response.out.write( k.thumbnail)
+                img = images.Image( blob_key=k.imageBlob)
+
+                widthInfo = self.request.get('width')
+                if not widthInfo:
+                    width = 320
                 else:
-                    self.response.out.write( k.imageBlob)
+                    width = int( widthInfo)
+                    
+                heightInfo = self.request.get('height')
+                if not heightInfo:
+                    height = 480
+                else:
+                    height = int( heightInfo)
+                
+                img.resize(width, height)
+                img.im_feeling_lucky()
+                outImg = img.execute_transforms(output_encoding=images.JPEG)
+                
+                self.response.headers['Content-Type'] = "image/jpeg"
+                self.response.out.write( outImg)
             else:
                 self.error(404)
 
@@ -44,11 +65,14 @@ class ImageStorePage(webapp2.RequestHandler):
         except:
             self.response.headers['Content-Type'] = "text/json"
             self.response.out.write('{"errorMsg":"unexpected error in ImageStorePage GET."}')
+            raise
 
 
+class ImageStoreUpload(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         try:
-            imageH = self.request.get('file')
+            upload_files = self.get_uploads('file')  # 'file' is file upload field in the form
+            blob_info = upload_files[0]
 
             kidID = self.request.get('kid')
             try:
@@ -58,7 +82,7 @@ class ImageStorePage(webapp2.RequestHandler):
                 k = kid.getKidByName(kidID)
 
             logging.debug( 'found kid: ' + k.kidName)
-            #k.setImage( imageH)
+            k.setImage( blob_info)
             k.put()
 
             self.response.out.write(k.toJSON())
@@ -66,7 +90,27 @@ class ImageStorePage(webapp2.RequestHandler):
         except ImageStoreError as e:
             self.response.out.write('{"errorMsg":"' + e.args[0] + '"}')
         except:
+            self.response.out.write('{"errorMsg":"unexpected error in ImageStorePage POST."}')
             raise
-            #self.response.out.write('{"errorMsg":"unexpected error in ImageStorePage POST."}')
 
         self.response.headers['Content-Type'] = "text/json"
+
+
+class BlobStorePage(webapp2.RequestHandler):
+    '''
+    API to store portrait data in blobstore, getting the upload url
+    '''
+    def get(self):
+        try:
+            uploadURL = blobstore.create_upload_url('/imagestoreupload')
+
+            self.response.headers['Content-Type'] = "text/json"
+            self.response.out.write('{"uploadURL":"' + uploadURL + '"}')
+
+        except ImageStoreError as e:
+            self.response.headers['Content-Type'] = "text/json"
+            self.response.out.write('{"errorMsg":"' + e.args[0] + '"}')
+        except:
+            self.response.headers['Content-Type'] = "text/json"
+            self.response.out.write('{"errorMsg":"unexpected error in ImageStorePage GET."}')
+

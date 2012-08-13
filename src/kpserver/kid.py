@@ -4,9 +4,8 @@ Created on Jul 31, 2012
 @author: ewilde
 '''
 from google.appengine.ext import db
-from google.appengine.api import images
+from google.appengine.ext import blobstore
 
-import logging
 import json
 
 import pointevent
@@ -19,8 +18,7 @@ class Kid(db.Model):
     '''
     kidName = db.StringProperty(required=True)
     events = db.ListProperty(db.Key)
-    imageBlob = db.BlobProperty()
-    thumbnail = db.BlobProperty()
+    imageBlob = blobstore.BlobReferenceProperty();
 
     def getJSONDict(self):
         outputDict = { 'kidName': self.kidName, 'key':self.key().id()}
@@ -39,23 +37,8 @@ class Kid(db.Model):
         result = json.dumps(outputDict)
         return result
     
-    def setImage(self, imageH):
-        logging.debug( 'setting imageH in kid')
-        logging.debug( self.kidName)
-        self.imageBlob = db.Blob( imageH)
-        self.thumbnail = db.Blob( images.resize(imageH, 80, 120))
-
-        logging.debug( 'size of image: ' + str( len( imageH)))
-        if self.imageBlob:
-            logging.debug( 'imageBlob not None')
-        else:
-            logging.debug( 'imageBlob is None')
-        if self.thumbnail:
-            logging.debug( 'thumbnail not None')
-        else:
-            logging.debug( 'thumbnail is None')
-
-        self.put()
+    def setImage(self, imageBI):
+        self.imageBlob = imageBI.key()
 
 
 def getKidByName( nm):

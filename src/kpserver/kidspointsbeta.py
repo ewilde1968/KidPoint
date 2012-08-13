@@ -14,6 +14,8 @@ class HomePage(webapp2.RequestHandler):
   
 app = webapp2.WSGIApplication([('/account', accountpage.AccountPage),
                                ('/imagestore', imagestorepage.ImageStorePage),
+                               ('/imagestoreupload', imagestorepage.ImageStoreUpload),
+                               ('/blobstore', imagestorepage.BlobStorePage),
                                ('/', HomePage)
                                ],
                               debug=True)
