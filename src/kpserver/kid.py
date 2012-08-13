@@ -6,6 +6,7 @@ Created on Jul 31, 2012
 from google.appengine.ext import db
 from google.appengine.api import images
 
+import logging
 import json
 
 import pointevent
@@ -39,8 +40,21 @@ class Kid(db.Model):
         return result
     
     def setImage(self, imageH):
+        logging.debug( 'setting imageH in kid')
+        logging.debug( self.kidName)
         self.imageBlob = db.Blob( imageH)
         self.thumbnail = db.Blob( images.resize(imageH, 80, 120))
+
+        logging.debug( 'size of image: ' + str( len( imageH)))
+        if self.imageBlob:
+            logging.debug( 'imageBlob not None')
+        else:
+            logging.debug( 'imageBlob is None')
+        if self.thumbnail:
+            logging.debug( 'thumbnail not None')
+        else:
+            logging.debug( 'thumbnail is None')
+
         self.put()
 
 

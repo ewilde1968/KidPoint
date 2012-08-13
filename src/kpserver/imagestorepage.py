@@ -4,6 +4,7 @@ Created on Aug 6, 2012
 @author: ewilde
 '''
 import webapp2
+import logging
 
 import kid
 
@@ -56,7 +57,8 @@ class ImageStorePage(webapp2.RequestHandler):
             except:
                 k = kid.getKidByName(kidID)
 
-            k.setImage( imageH)
+            logging.debug( 'found kid: ' + k.kidName)
+            #k.setImage( imageH)
             k.put()
 
             self.response.out.write(k.toJSON())

@@ -400,12 +400,7 @@ $(document).bind('mobileinit', function() {
 				if( response.kidName == kid.kidName)
 					setKidData( response)
 
-				// clean up
-				if( navigator && navigator.camera) {
-				
-				} else {
-					$.mobile.changePage( $('#detailspage'));
-				}
+				$.mobile.changePage( $('#detailspage'));
 			}
 		};
 		obj.ajaxSubmit(options);
@@ -423,12 +418,12 @@ $(document).bind('mobileinit', function() {
 					};
 					
 					var ft = new FileTransfer();
-					ft.upload( imageURI, encodeURI('/imagestore'),
+					ft.upload( imageURI, encodeURI(imagestoreURL),
 						function(r) {
 						    queuePost();
 						},
 						function(error) {
-							alert('unable to upload:' + error);
+							alert('unable to upload: ' + error.source + ' error code: ' + error.code);
 						},
 						options);
 				}
