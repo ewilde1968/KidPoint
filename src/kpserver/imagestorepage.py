@@ -71,8 +71,15 @@ class ImageStorePage(webapp2.RequestHandler):
 class ImageStoreUpload(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         try:
+            logging.debug( 'ImageStoreUpload:POST')
             upload_files = self.get_uploads('file')  # 'file' is file upload field in the form
             blob_info = upload_files[0]
+            
+            if blob_info:
+                logging.debug( 'found BlobInfo object')
+                logging.debug( 'mime type:' + blob_info.content_type)
+                logging.debug( 'filename: ' + blob_info.filename)
+                logging.debug( 'size:     ' + str(blob_info.size))
 
             kidID = self.request.get('kid')
             try:
@@ -102,7 +109,9 @@ class BlobStorePage(webapp2.RequestHandler):
     '''
     def get(self):
         try:
+            logging.debug( 'BlobStorePage:GET')
             uploadURL = blobstore.create_upload_url('/imagestoreupload')
+            logging.debug( uploadURL)
 
             self.response.headers['Content-Type'] = "text/json"
             self.response.out.write('{"uploadURL":"' + uploadURL + '"}')

@@ -12,6 +12,14 @@ $(document).bind('mobileinit', function() {
 	var isPhone = function() {
 		return navigator && navigator.camera;
 	}
+	
+	// setup for Phone Gap access cross domain
+	if( $.support)
+		$.support.cors = true;
+	if( $.mobile) {
+		$.mobile.allowCrossDomainPages = true;
+		$.mobile.pushState = false;
+	}
 
 	var setAccountData = function( acctData) {
 		accountData = acctData;
@@ -405,7 +413,7 @@ $(document).bind('mobileinit', function() {
 					};
 					
 					var ft = new FileTransfer();
-					ft.upload( imageURI, encodeURI(imagestoreURL),
+					ft.upload( imageURI, encodeURI(uploadURL),
 						function(r) {},
 						function(error) {
 							alert('unable to upload: ' + error.source + ' error code: ' + error.code);
