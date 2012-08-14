@@ -1,7 +1,7 @@
 import webapp2
 
-import accountpage
-import imagestorepage
+from controller import accountpage
+from controller import imagestorepage
 
 
 class HomePage(webapp2.RequestHandler):
@@ -9,7 +9,7 @@ class HomePage(webapp2.RequestHandler):
     Kid Point home page - index.html redirect
     '''
     def get(self):
-        self.redirect("/android_assets/www/index.html", permanent=True)
+        self.redirect("/assets/index.html", permanent=True)
 
   
 app = webapp2.WSGIApplication([('/account', accountpage.AccountPage),

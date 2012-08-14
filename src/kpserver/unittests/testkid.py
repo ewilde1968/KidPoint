@@ -9,7 +9,7 @@ from google.appengine.ext import db
 import unittest
 import json
 
-from kpserver import kid
+from kpserver.model import kid
 
 
 class DemoTestCase(unittest.TestCase):
