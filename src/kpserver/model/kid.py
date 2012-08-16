@@ -9,7 +9,6 @@ from google.appengine.ext import blobstore
 import json
 
 import pointevent
-import loginerror
 
 
 class Kid(db.Model):
@@ -21,7 +20,7 @@ class Kid(db.Model):
     imageBlob = blobstore.BlobReferenceProperty();
 
     def getJSONDict(self):
-        outputDict = { 'kidName': self.kidName, 'key':self.key().id()}
+        outputDict = { 'kidName': self.kidName, 'key':str(self.key())}
         if self.imageBlob:
             outputDict['hasImage'] = True
 
@@ -39,14 +38,25 @@ class Kid(db.Model):
     
     def setImage(self, imageBI):
         self.imageBlob = imageBI.key()
+        
+    def moveToAncestor(self, ancestor):
+        if ancestor.is_saved() and self.parent_key() == ancestor.key():
+            return self
+        
+        newKid = Kid( parent=ancestor, kidName=self.kidName, imageBlob=self.imageBlob)
+        newKid.events = []
+        for e in self.events:
+            e = db.get(e)
+            newE = pointevent.PointEvent( parent=ancestor, points=e.points)
+            newE.dt = e.dt
+            newE.put()
+            
+            newKid.events.append(newE.key())
 
+            e.delete()  # e is guaranteed to have been saved previously
 
-def getKidByName( nm):
-    q = Kid.all()
-    q.filter('kidName = ', nm)
-    result = q.get()
-
-    return result       # may be None result
+        newKid.put()
+        return newKid
 
 
 def fromJSON( jo):
@@ -68,23 +78,18 @@ def fromJSON( jo):
             try:
                 peResult = pointevent.fromJSON(jo)
                 return peResult
-            except loginerror.LoginError:
-                raise
             except:
-                raise loginerror.LoginError( 'unable to create Kid subobject as PointEvent')
+                raise
                 
         # looks like its a Kid object, create one
         result = None
         if 'key' in jo:
-            result = Kid.get_by_id( jo['key'])
+            result = Kid.get( jo['key'])
 
         # kidName must be in jo
         if not result:
-            # check to see if the kid already exists by kidName
-            result = getKidByName( jo['kidName'])
-            if not result:
-                result = Kid( kidName=jo['kidName'])
-                result.touched = True
+            result = Kid( kidName=jo['kidName'])
+            result.touched = True
         elif result.kidName != jo['kidName']:
             result.kidName = jo['kidName']
             result.touched = True
@@ -105,7 +110,5 @@ def fromJSON( jo):
                     result.events.append( e.key())
 
         return result
-    except loginerror.LoginError:
-        raise
     except:
-        raise loginerror.LoginError('unexpected error in account.fromJSON')
+        raise

@@ -27,7 +27,7 @@ class DemoTestCase(unittest.TestCase):
     def tearDown(self):
         self.testbed.deactivate()
 
-    def testCreateAccount(self):
+    def testCreateAccountFromJSON(self):
         # mimic the POST data from the client's account creation page
         addr = "test@tester.com"
         pwd = "dummypwd"
@@ -40,7 +40,7 @@ class DemoTestCase(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual( result.address, addr)
         self.assertEqual( result.password, pwd)
-        
+
     def testGetAccount(self):
         # mimic a GET of an account
         addr = "test@tester.com"
@@ -66,12 +66,11 @@ class DemoTestCase(unittest.TestCase):
 
     def testAccountWithKid(self):
         kidName = 'Alisa'
-        imageURL = 'http://miggle.biggle.com/myfoofyimage.jpg'
         addr = "test@tester.com"
         pwd = "dummypwd"
 
         postData = '{ "address":"' + addr + '", "password":"' + pwd + '", "create":"true", '
-        postData +=  '"kids": [ { "kidName":"' + kidName + '", "imageURL":"' + imageURL + '" } ] }'
+        postData +=  '"kids": [ { "kidName":"' + kidName + '" } ] }'
 
         acct = json.JSONDecoder(object_hook=account.fromJSON).decode(postData)
         acct.put()
@@ -108,7 +107,9 @@ class DemoTestCase(unittest.TestCase):
         # initial types created and put into datastore
         # POST additional points
         points2 = '3'
-        postData = '{ "address":"' + addr + '", "kids":[{"kidName":"' + kidName + '", "events":[{"points":' + points2 + '}]}]}'
+        keyData = str(k.key())
+        kidData = '[{"key":"' + keyData + '", "kidName":"' + k.kidName + '", "events":[{"points":' + points2 + '}]}]'
+        postData = '{ "address":"' + addr + '", "kids":' + kidData + '}'
 
         result = json.JSONDecoder(object_hook=account.fromJSON).decode(postData)
         self.assertIsNotNone(result)

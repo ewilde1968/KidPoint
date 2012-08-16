@@ -18,9 +18,14 @@ class Account(db.Model):
     address = db.EmailProperty(required=True,indexed=True)
     password= db.StringProperty()
     kids = db.ListProperty(db.Key)
+    currentKid = db.StringProperty()
 
     def getJSONDict(self):
-        outputDict = { 'address':self.address, 'password':self.password, 'key':self.key().id()}
+        outputDict = {'address':self.address,
+                      'password':self.password,
+                      'key':str(self.key()),
+                      'currentKid':self.currentKid
+                      }
 
         if self.kids and len(self.kids) > 0:
             outputDict['kids'] = []
@@ -75,12 +80,12 @@ def fromJSON( jo):
                 # try to create a Kid instead
                 return kid.fromJSON(jo)
             except:
-                raise loginerror.LoginError( 'unexpected error attempting to create Kid object')
+                raise
                 
         # looks like its an Account object, create one
         result = None
         if 'key' in jo:
-            result = Account.get_by_id( jo['key'])
+            result = Account.get( jo['key'])
 
         # get the password string for future use
         pwd = None
@@ -103,20 +108,28 @@ def fromJSON( jo):
         # result must now exist
         if pwd:
             result.password = pwd
-                
+
+        if 'currentKid' in jo:
+            result.currentKid = jo['currentKid']
+
         if 'kids' in jo:
             if not result.kids:
                 result.kids = []
             for k in jo['kids']:
                 # all Kids are now created
                 append = not k.is_saved()
-                k.put()
                 
                 if append:
-                    result.kids.append( k.key())
+                    # make sure the kid has the right ancestor
+                    if not result.is_saved():
+                        result.put()    # initial save so result can be used as an ancestor
+
+                    newKid = k.moveToAncestor(result)
+                    result.kids.append( newKid.key())
+                else:
+                    k.put() # just update the exist kid
 
         return result
-    except loginerror.LoginError:
-        raise
+
     except:
-        raise loginerror.LoginError( 'unexpected error in Account.fromJSON')
+        raise

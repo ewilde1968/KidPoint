@@ -1,10 +1,7 @@
 $(document).bind('mobileinit', function() {
-	var accountData = null;
-	var chosenKidData = null;
-	var ajaxQueue = $({});
 	var localURL = 'http://localhost:8082/';
 	var remoteURL = 'http://kidspointsbeta.appspot.com/';
-	var rootURL = remoteURL;
+	var rootURL = localURL;
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
@@ -21,6 +18,7 @@ $(document).bind('mobileinit', function() {
 		$.mobile.pushState = false;
 	}
 
+	var accountData = null;
 	var setAccountData = function( acctData) {
 		accountData = acctData;
 	}
@@ -29,9 +27,9 @@ $(document).bind('mobileinit', function() {
 		return accountData;
 	}
 
+	var chosenKidData = null;
 	var setKidData = function( kid) {
 		chosenKidData = kid;
-		acct = getAccountData();
 		
 		if( $.mobile.activePage == $('#homepage'))
 			setHomePageWidgets();
@@ -42,66 +40,204 @@ $(document).bind('mobileinit', function() {
 	var getKidData = function() {
 		return chosenKidData;
 	}
+	
+	var setKidName = function(kid,newName) {
+		kid.oldName = kid.kidName;	// oldName's existence is a semaphore for if a change has occurred
+		kid.kidName = newName;
+	}
+	
+	var addKidPoints = function(kid,val) {
+		if( !kid.newPoints)
+			kid.newPoints = 0;
+			
+		kid.newPoints += val;	// a nonzero newPoint's is a semaphore for if a change has occurred
+	}
+	
+	var unnamedKidName = "new";
+	var createKidList = function() {
+		var acctData = getAccountData();
+		
+		if( acctData) {
+			// populate the dropdown list
+			if( acctData.kids == null)
+				acctData.kids = [];
+
+			var items = [];
+			var foundUnnamed = false;
+			$.each(acctData.kids, function(i,k) {
+				items.push( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
+				if( k.kidName == unnamedKidName)
+					foundUnnamed = true;
+			});
+			
+			// add an "unnamed" new kid if one doesn't already exist
+			if( !foundUnnamed) {
+				items.push( '<option value="' + unnamedKidName + '">' + unnamedKidName + '</option>');
+				acctData.kids.push( {
+										"kidName":unnamedKidName,
+										"newPoints":0
+									});
+			}
+
+			// join and add the list to the select widget
+			itemData = items.join(' ');
+			$('#home_childDDL').html( itemData);
+		}
+	}
 
 	var setDefaultKidData = function() {
 		// set default kid data
 		acctData = getAccountData();
 		
 		if( acctData.kids) {
-			if( acctData.kids.length > 1)
-				setKidData( acctData.kids[1]);
-			else
-				setKidData( acctData.kids[0]);
+			var matchKidName = unnamedKidName;
+			if( acctData.currentKid)
+				matchKidName = acctData.currentKid;
+
+			$.each(acctData.kids, function(i,k) {
+				if( matchKidName == k.kidName)
+					setKidData( k);
+			});
 		}
 	}
 	
-	var postAccount = function(next) {
+	var getImageURL = function( kid, thumbnail) {
+		var url = imagestoreURL + '?account="' + getAccountData().key + '"&kid=';
+			
+		if( kid.key)
+			url += kid.key;
+		else
+			url += '"' + kid.kidName + '"';
+
+		if( thumbnail)
+			url += '&height=120&width=80';
+		else
+			url += '&height=' + $(window).height() + '&width=' + $(window).width();
+			
+		return url;
+	}
+	
+	/*
+	 * Get the total points
+	 * 
+	 * Input: kid object
+	 */
+	var getKidTotal = function( kid) {
+		var result = 0;
+		if( kid != null && kid.events != null) {
+			$.each(kid.events, function(i,e) {
+				result += e.points;
+			});
+		}
+
+		if( kid.newPoints > 0)
+			result += kid.newPoints;
+					
+		return result;
+	}
+	
+	var postAccount = function( callback) {
+		// POST the account data now
+		var acctData = getAccountData();
+		var outData = { 'address':acctData.address,
+						'password':acctData.password,
+						'key':acctData.key,
+						'currentKid':getKidData().kidName,
+						'kids':[]
+					  }
+			
+		$.each(acctData.kids, function(i,k) {
+			kid = { 'kidName':k.kidName,
+					'imageBlobKey':k.imageBlobKey,
+					'key':k.key
+				};
+				
+			// all events are considered new events with new points
+			if( k.newPoints > 0)
+				kid.events = [{'points':k.newPoints}];
+
+			outData.kids.push( kid);
+			
+			// clear out the semaphores indicating kid changes
+			k.newPoints = 0;
+			delete k.oldName;
+		});
+
+		$.post( accountURL, JSON.stringify(outData),
+			function(responseData,status,xhr) {
+				/*
+				 * All responses in JSON. Possible response objects include:
+				 * 
+				 * error object:
+				 * 		errorMsg: string to show
+				 * 
+				 * account object:
+				 * 		address: email address for account
+				 * 		password: password for account
+				 * 		kids: array of Kid objects
+				 */
+				if( "errorMsg" in responseData) {
+					$('#err_servermainmsg').text(responseData.errorCategory);
+					$('#err_servermsg').text(responseData.errorMsg);
+					$.mobile.changePage( $('#errdialog'));
+				} else {
+					/*
+					 * Reload the data
+					 * 
+					 * A kids data could have changed since the POST was initiated.
+					 * The data will have changed if the corresponding kid object has
+					 * an oldName or a nonzero newPoints member.
+					 * 
+					 * Go through each legacy kid object. If that legacy kid object has
+					 * changed, reflect those same changes in the fetched kid object. Then
+					 * use the fetched (possibly updated) kid objects as the current kids.
+					 * 
+					 */
+
+					// add any changed kid data
+					currentAcct = getAccountData();
+					var ck = getKidData();
+					$.each( currentAcct.kids, function(i,k) {
+						$.each( responseData.kids, function (j,fk) {
+							if(	k.key == fk.key					// k.key could be null, fk.key cannot be null
+								|| (k.oldName == fk.kidName)	// k.oldName could be null, fk.kidName cannot
+								|| (k.kidName == fk.kidName))	// neither can be null
+							{
+								// fk is the matching fetched kid for k
+								if( k.oldName || k.newPoints > 0) {
+									// the legacy kid object has changed, edit the newly fetched kid
+									if( k.oldName) setKidName( fk, k.kidName);
+									fk.newPoints = k.newPoints;
+
+									queuePost();
+								}
+
+								// make sure to set the currently selected kid to the (possibly updated) fetched kid
+								if( ck == k) setKidData(fk);
+							}
+						});
+					});
+
+					// reset account data
+					setAccountData( responseData);
+				}
+		});
+	}
+	
+	var ajaxQueue = $({});
+	var postAccountNow = function( callback) {
+		// there's a narrow window where another post can be queued after
+		// clearing the queue here. Just accept the extraneous write
+		ajaxQueue.clearQueue();
+		postAccount( callback);
+	}
+	
+	var postQueuedAccount = function(next) {
 		// may have already had an item in the delay interval when last queued
 		// only implement when this is the very last
 		// total delay no greater than 2x
-		if( ajaxQueue.queue().length == 1) {
-			// POST the account data
-			var acctData = getAccountData();
-			var outData = { 'address':acctData.address,
-							'password':acctData.password,
-							'key':acctData.key,
-							'kids':[]
-						  }
-			
-			$.each(acctData.kids, function(i,k) {
-				kid = { 'kidName':k.kidName,
-						'imageBlobKey':k.imageBlobKey,
-						'key':k.key
-					};
-				if( 'newPoints' in k && k.newPoints > 0)
-					kid.events = [{'points':k.newPoints}];
-
-				outData.kids.push( kid);
-				k.newPoints = 0;
-			});
-			
-			$.post( accountURL, JSON.stringify(outData),
-				function(responseData,status,xhr) {
-					/*
-					 * All responses in JSON. Possible response objects include:
-					 * 
-					 * error object:
-					 * 		errorMsg: string to show
-					 * 
-					 * account object:
-					 * 		address: email address for account
-					 * 		password: password for account
-					 * 		kids: array of Kid objects
-					 */
-					if( "errorMsg" in responseData) {
-						$('#err_servermainmsg').text(responseData.errorCategory);
-						$('#err_servermsg').text(responseData.errorMsg);
-						$.mobile.changePage( $('#errdialog'));
-					} else {
-						// no-op
-					}
-			});
-		}
+		if( ajaxQueue.queue().length == 1)
+			postAccount(null);
 
 		// clear the item off the queue
 		if( next)
@@ -127,6 +263,18 @@ $(document).bind('mobileinit', function() {
 			ajaxQueue.queue( postAccount);
 		}
 	}
+
+
+	/*
+	 * 
+	 * Clear login information when loading the login or create account pages
+	 */
+	$('#loginpage').live('pagebeforeshow', function() {
+		$('#login_addr').val( '');
+		$('#login_pwd').val( '');
+		$('#login_errtext').addClass('login_hidden');
+	});
+
 
 	/*
 	 * When clicking login button verify and load the account information
@@ -167,6 +315,14 @@ $(document).bind('mobileinit', function() {
 				}
 			});
 	});
+	
+	
+	$('#createaccountpage').live('pagebeforeshow', function() {
+		$('#create_addr').val( '');
+		$('#create_password').val( '');
+		$('#create_confirm').val( '');
+	});
+
 	
 	/*
 	 * When clicking create account button verify the account information
@@ -221,22 +377,6 @@ $(document).bind('mobileinit', function() {
 	
 	
 	/*
-	 * 
-	 * Clear login information when loading the login or create account pages
-	 */
-	$('#loginpage').live('pagebeforeshow', function() {
-		$('#login_addr').val( '');
-		$('#login_pwd').val( '');
-		$('#login_errtext').addClass('login_hidden');
-	});
-	$('#createaccountpage').live('pagebeforeshow', function() {
-		$('#create_addr').val( '');
-		$('#create_password').val( '');
-		$('#create_confirm').val( '');
-	});
-	
-	
-	/*
 	 *
 	 * HOMEPAGE page change handling
 	 * 
@@ -248,26 +388,6 @@ $(document).bind('mobileinit', function() {
 			
 		setHomePageWidgets();
 	});
-	
-	var createKidList = function() {
-		var acctData = getAccountData();
-		
-		if( acctData) {
-			// populate the dropdown list
-			if( acctData.kids == null || acctData.kids.length < 1) {
-				acctData.kids = [];
-				// kid didn't exist in data, create kid
-				acctData.kids.push( { 'kidName':"new", 'newPoints':0});
-			}
-				
-			var items = [];
-			$.each(acctData.kids, function(i,k) {
-				items.push( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
-			});
-			itemData = items.join(' ');
-			$('#home_childDDL').html( itemData);
-		}
-	}
 	
 	/*
 	 * Set the widget values of the home page to show the correct
@@ -287,45 +407,6 @@ $(document).bind('mobileinit', function() {
 		$('#home_childDDL').selectmenu('refresh');
 		$('#home_totalL').html( getKidTotal(kid));
 	}
-	
-	var getImageURL = function( kid, thumbnail) {
-		var url = imagestoreURL + '?account="' + acct.address + '"&kid=';
-			
-		if( kid.key)
-			url += kid.key;
-		else
-			url += '"' + kid.kidName + '"';
-
-		if( thumbnail)
-			url += '&height=120&width=80';
-		else
-			url += '&height=' + $(window).height() + '&width=' + $(window).width();
-			
-		return url;
-	}
-	
-	/*
-	 * Get the total points
-	 * 
-	 * Input: kid object
-	 */
-	var getKidTotal = function( kid) {
-		var result = 0;
-		if( kid != null && kid.events != null) {
-			kid.events.forEach( function( elem, index, arr) {
-				valChange = elem.points;
-				result += valChange;
-			});
-		}
-
-		if( kid.newPoints != null)
-			result += kid.newPoints;
-		else
-			kid.newPoints = 0;
-					
-		return result;
-	}
-
 	/*
 	 * 
 	 * HOMEPAGE widget handling
@@ -336,8 +417,7 @@ $(document).bind('mobileinit', function() {
 
 	var bonusBOnVclick = function( valChange) {
 		var kid = getKidData();
-		
-		kid.newPoints += valChange;
+		addKidPoints( kid, valChange);
 		
 		$('#home_totalL').html( getKidTotal(kid));
 		
@@ -346,14 +426,12 @@ $(document).bind('mobileinit', function() {
 	
 	$('#home_childDDL').live('change', function( event, ui) {
 		var acctData = getAccountData();
-		
-		if( acctData) {
+		if( acctData && acctData.kids) {
 			kidName = $('#home_childDDL').val();
 
-			var kid = null;
-			if( acctData && acctData.kids)
-				acctData.kids.forEach( function(e,i,a) {if( e.kidName == kidName) kid = e});
-			setKidData( kid);
+			$.each(acctData.kids, function(i,k) {
+				if( k.kidName == kidName) setKidData( k);
+			});
 		}
 	});
 
@@ -379,7 +457,7 @@ $(document).bind('mobileinit', function() {
 					newKid = item;
 			});
 			if( newKid == null) {
-				if( kid.kidName == "new") {
+				if( kid.kidName == unnamedKidName) {
 					// Overwrote the "new" kid
 					// create a new Kid object and append it to the array
 					// set the current kid to this new object and refresh the
@@ -389,61 +467,18 @@ $(document).bind('mobileinit', function() {
 					kid.newPoints = 0;	// reset the "new" kid to be a fresh kid
 					acctData.kids.push( newKid);
 					setKidData( newKid);
-					setDetailsWidgets();
 				} else
-					kid.kidName = newName;
+					setKidName( kid, newName);
+					setKidData( kid);	// refresh the kid data and page widgets
 
 				queuePost();
 			} else {
 				setKidData( newKid);
-				setDetailsWidgets();
 			}
 		}
 	});
 	
-	var GetPicture = function( uploadURL) {
-		if( isPhone()) {
-			navigator.camera.getPicture( function(imageURI) {
-				var kid = getKidData();
-				if( kid && imageURI) {
-					var options = new FileUploadOptions();
-					options.params = {
-						'account': getAccountData().address,
-						'kid': kid.key ? kid.key : kid.kidName
-					};
-					
-					var ft = new FileTransfer();
-					ft.upload( imageURI, encodeURI(uploadURL),
-						function(r) {},
-						function(error) {
-							alert('unable to upload: ' + error.source + ' error code: ' + error.code);
-						},
-						options);
-				}
-    
-			    if( navigator.camera.cleanup)
-			    	navigator.camera.cleanup( function() {}, function() {});
-			},  function(message) {
- 		   		alert('Failed because: ' + message);
-			}, { sourceType: Camera.PictureSourceType.PHOTOLIBRARY,
-				 destinationType: Camera.DestinationType.FILE_URI
-			});
-		} else {
-			// in webapp so browse for file to upload, first get URL
-			if( getKidData().key)
-				$('#browse_kid').val( getKidData().key);
-			else
-				$('#browse_kid').val( getKidData().kidName);
-				
-			$('#browse_account').val( getAccountData().key);
-			
-			$('#browse_upload').prop( 'action', uploadURL)
-			
-			$.mobile.changePage( $('#browsedialog'));
-		}
-	}
-	
-	$('#details_portraitImg').live('vclick', function( event, ui) {
+	var GetPicture = function() {
 		/* Store image data in the blobstore as many images come from a smartphone
 		 * camera, whose default images are often well over a megabyte and so break
 		 * the GAE blob limit. The GAE image service can still be used to resize
@@ -457,11 +492,48 @@ $(document).bind('mobileinit', function() {
 		 */
 		$.getJSON( blobstoreURL, function(data) {
 			// data is a JSON object with the upload URL as uploadURL
-			uploadURL = data.uploadURL;
-			
-			// now get the selection from the phone
-			GetPicture( uploadURL); // also uploads
+			if( isPhone()) {
+				navigator.camera.getPicture( function(imageURI) {
+					var kid = getKidData();
+					if( kid && imageURI) {
+						var options = new FileUploadOptions();
+						options.params = {
+							'account': getAccountData().address,
+							'kid': kid.key ? kid.key : kid.kidName
+						};
+
+						var ft = new FileTransfer();
+						ft.upload( imageURI, data.uploadURL,
+							function(r) {},
+							function(error) {
+								alert('unable to upload: ' + error.source + ' error code: ' + error.code);
+							},
+							options);
+					}
+
+				    if( navigator.camera.cleanup)
+				    	navigator.camera.cleanup( function() {}, function() {});
+				},  function(message) {
+ 		   			alert('Failed because: ' + message);
+				}, { sourceType: Camera.PictureSourceType.PHOTOLIBRARY,
+					 destinationType: Camera.DestinationType.FILE_URI
+				});	// close getPicture
+			} else {
+				// in webapp so browse for file to upload, first set URL
+				$('#browse_kid').val( getKidData().key);
+				$('#browse_account').val( getAccountData().key);
+				$('#browse_upload').prop( 'action', data.uploadURL)
+				$.mobile.changePage( $('#browsedialog'));
+			}
 		});
+	}
+	
+	$('#details_portraitImg').live('vclick', function( event, ui) {
+		// make sure the kid is saved
+		if( !getKidData().key)
+			postAccountNow( function() {GetPicture();});
+		else
+			GetPicture();
 	});
 	
 	var setDetailsWidgets = function() {

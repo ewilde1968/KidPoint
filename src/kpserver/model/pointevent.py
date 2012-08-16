@@ -8,6 +8,8 @@ from google.appengine.ext import db
 import datetime
 import json
 
+import loginerror
+
 
 class PointEvent(db.Model):
     '''
@@ -19,7 +21,7 @@ class PointEvent(db.Model):
     def getJSONDict(self):
         dthandler = lambda obj: obj.isoformat() if isinstance(obj, datetime.datetime) else None
         dtStr = json.dumps(self.dt,default=dthandler)
-        outputDict = { 'dt':dtStr, 'points':self.points, 'key':self.key().id() }
+        outputDict = { 'dt':dtStr, 'points':self.points, 'key':str(self.key()) }
 
         return outputDict
     
@@ -40,9 +42,8 @@ def fromJSON( jo):
     for the kid.
     '''
     try:
-        result = None
         if 'key' in jo:
-            return PointEvent.get_by_id( jo['key'])   # pointevents are static
+            return PointEvent.get( jo['key'])   # pointevents are static
 
         val = int(jo['points'])
         if val == 0:
@@ -50,4 +51,4 @@ def fromJSON( jo):
 
         return PointEvent( points=val)  # raise if malformed object
     except:
-        raise LoginError( 'unexpected error in pointevent.fromJSON')
+        raise loginerror.LoginError( 'unexpected error in pointevent.fromJSON')

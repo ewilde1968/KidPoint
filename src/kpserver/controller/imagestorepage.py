@@ -6,11 +6,10 @@ Created on Aug 6, 2012
 import webapp2
 import logging
 
+from google.appengine.ext import db
 from google.appengine.api import images
 from google.appengine.ext import blobstore
 from google.appengine.ext.webapp import blobstore_handlers
-
-from model import kid
 
 
 class ImageStoreError(ValueError):
@@ -25,12 +24,8 @@ class ImageStorePage(webapp2.RequestHandler):
     '''
     def get(self):
         try:
-            kInfo = self.request.get('kid')
-            try:
-                kidID = int( kInfo)
-                k = kid.Kid.get_by_id(kidID)
-            except:
-                k = kid.getKidByName(kInfo)
+            kidKey = self.request.get('kid')
+            k = db.get(kidKey)
 
             if not k:
                 raise ImageStoreError( 'no Kid data available')
@@ -81,12 +76,8 @@ class ImageStoreUpload(blobstore_handlers.BlobstoreUploadHandler):
                 logging.debug( 'filename: ' + blob_info.filename)
                 logging.debug( 'size:     ' + str(blob_info.size))
 
-            kidID = self.request.get('kid')
-            try:
-                kidID = int( kidID)
-                k = kid.Kid.get_by_id(kidID)
-            except:
-                k = kid.getKidByName(kidID)
+            kidKey = self.request.get('kid')
+            k = db.get( kidKey)
 
             logging.debug( 'found kid: ' + k.kidName)
             k.setImage( blob_info)
