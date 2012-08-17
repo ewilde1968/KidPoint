@@ -27,18 +27,18 @@ $(document).bind('mobileinit', function() {
 		return accountData;
 	}
 
-	var chosenKidData = null;
+	var currentKid = null;
 	var setKidData = function( kid) {
-		chosenKidData = kid;
-		
-		if( $.mobile.activePage == $('#homepage'))
-			setHomePageWidgets();
-		else if( $.mobile.activePage == $('#detailspage'))
-			setDetailsWidgets();
+		currentKid = kid;
+		console.log('setKidData, kid==' + kid.kidName);
+
+		// set all page widgets to reflect new selected kid		
+		setHomePageWidgets();
+		setDetailsWidgets();
 	}
 	
 	var getKidData = function() {
-		return chosenKidData;
+		return currentKid;
 	}
 	
 	var setKidName = function(kid,newName) {
@@ -65,15 +65,17 @@ $(document).bind('mobileinit', function() {
 			var items = [];
 			var foundUnnamed = false;
 			$.each(acctData.kids, function(i,k) {
-				items.push( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
-				if( k.kidName == unnamedKidName)
+				if( k.kidName == unnamedKidName) {
 					foundUnnamed = true;
+					items.unshift( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
+				} else
+					items.push( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
 			});
 			
 			// add an "unnamed" new kid if one doesn't already exist
 			if( !foundUnnamed) {
-				items.push( '<option value="' + unnamedKidName + '">' + unnamedKidName + '</option>');
-				acctData.kids.push( {
+				items.unshift( '<option value="' + unnamedKidName + '">' + unnamedKidName + '</option>');
+				acctData.kids.unshift( {
 										"kidName":unnamedKidName,
 										"newPoints":0
 									});
@@ -142,7 +144,7 @@ $(document).bind('mobileinit', function() {
 		var outData = { 'address':acctData.address,
 						'password':acctData.password,
 						'key':acctData.key,
-						'currentKid':getKidData().kidName,
+						'currentKid':currentKid.kidName,
 						'kids':[]
 					  }
 			
@@ -214,8 +216,14 @@ $(document).bind('mobileinit', function() {
 
 								// make sure to set the currently selected kid to the (possibly updated) fetched kid
 								if( ck == k) setKidData(fk);
+								
+								return false;	// stop inner loop, we're done
 							}
+							
+							return true;	// keep going
 						});
+						
+						return true;	// keep going for every kid
 					});
 
 					// reset account data
@@ -248,13 +256,11 @@ $(document).bind('mobileinit', function() {
 	 * Queue a POST of the account to the server.
 	 * 
 	 * Try to accumulate posts to the point where there is no more activity.
-	 * A good default to start with is 5 seconds of inactivity pushes a post.
+	 * A good default to start with is 3 seconds of inactivity pushes a post.
 	 * 
-	 * TODO: gather data analytics on beta tests to determine time interval
-	 * 		 between activity and a post.
 	 */
 	var queuePost = function() {
-		var queueInterval = 5000;	// wait 5 seconds between last activity and post
+		var queueInterval = 3000;	// wait 3 seconds between last activity and post
 
 		if( ajaxQueue.queue().length < 3) {
 			// queue up the post if there are no more than two in the queue already
@@ -400,6 +406,8 @@ $(document).bind('mobileinit', function() {
 	var setHomePageWidgets = function() {
 		kid = getKidData();
 		
+		console.log('setHomePageWidgets, kid==' + kid.kidName)
+		
 		if( kid.hasImage)
 			$('#home_portraitImg').prop('src', getImageURL(kid, false));
 
@@ -430,7 +438,12 @@ $(document).bind('mobileinit', function() {
 			kidName = $('#home_childDDL').val();
 
 			$.each(acctData.kids, function(i,k) {
-				if( k.kidName == kidName) setKidData( k);
+				if( k.kidName == kidName) {
+					setKidData( k);
+					return false;	// stop, we're done
+				}
+				
+				return true;	// keep going
 			});
 		}
 	});
@@ -451,30 +464,42 @@ $(document).bind('mobileinit', function() {
 		// either load another kid already extant or change this kid's kidName
 		var newName = $('#details_name').val();		
 		if( newName != kid.kidName) {
-			var newKid = null;
 			$.each( acctData.kids, function(i, item) {
-				if( item.kidName == newName)
-					newKid = item;
+				if( item.kidName == newName) {
+					setKidData( item);
+					return;
+				}
 			});
-			if( newKid == null) {
-				if( kid.kidName == unnamedKidName) {
-					// Overwrote the "new" kid
-					// create a new Kid object and append it to the array
-					// set the current kid to this new object and refresh the
-					// 0th element "new" kid object
-					newKid = {  'kidName':newName,
-								'newPoints': kid.newPoints };
-					kid.newPoints = 0;	// reset the "new" kid to be a fresh kid
-					acctData.kids.push( newKid);
-					setKidData( newKid);
-				} else
-					setKidName( kid, newName);
-					setKidData( kid);	// refresh the kid data and page widgets
 
-				queuePost();
-			} else {
+			if( kid.kidName == unnamedKidName) {
+				/*
+				 * Changed name from "new" kid to something else
+				 * 
+				 * Create a new kid object and append it to the account's
+				 * array of kids. The current kid becomes this new kid
+				 * object.
+				 * 
+				 * The "new" kid object needs to be reset, too.
+				 * 
+				 */
+				newKid = {
+							'kidName': newName,
+							'events': kid.events,
+							'newPoints': kid.newPoints,
+							'key': kid.key
+						};
+
+				acctData.kids.push( newKid);
 				setKidData( newKid);
+
+				kid.newPoints = 0;	// reset the "new" kid to be a fresh kid
+				delete kid.key;
+			} else {
+				setKidName( kid, newName);
+				setKidData( kid);	// refresh the kid data and page widgets
 			}
+
+			queuePost();
 		}
 	});
 	
