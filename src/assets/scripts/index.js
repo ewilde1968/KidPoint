@@ -132,8 +132,9 @@ $(document).bind('mobileinit', function() {
 			});
 		}
 
-		if( kid.newPoints > 0)
-			result += kid.newPoints;
+		if( !kid.newPoints)
+			kid.newPoints = 0;
+		result += kid.newPoints;
 					
 		return result;
 	}
@@ -155,7 +156,7 @@ $(document).bind('mobileinit', function() {
 				};
 				
 			// all events are considered new events with new points
-			if( k.newPoints > 0)
+			if( k.newPoints)
 				kid.events = [{'points':k.newPoints}];
 
 			outData.kids.push( kid);
@@ -206,7 +207,7 @@ $(document).bind('mobileinit', function() {
 								|| (k.kidName == fk.kidName))	// neither can be null
 							{
 								// fk is the matching fetched kid for k
-								if( k.oldName || k.newPoints > 0) {
+								if( k.oldName || k.newPoints) {
 									// the legacy kid object has changed, edit the newly fetched kid
 									if( k.oldName) setKidName( fk, k.kidName);
 									fk.newPoints = k.newPoints;
