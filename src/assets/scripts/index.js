@@ -30,7 +30,6 @@ $(document).bind('mobileinit', function() {
 	var currentKid = null;
 	var setKidData = function( kid) {
 		currentKid = kid;
-		console.log('setKidData, kid==' + kid.kidName);
 
 		// set all page widgets to reflect new selected kid		
 		setHomePageWidgets();
@@ -395,6 +394,23 @@ $(document).bind('mobileinit', function() {
 		setHomePageWidgets();
 	});
 	
+	$('#homepage').live('pagehide', function(event,ui) {
+		if( ui.nextPage[0].id == 'loginpage') {
+			/*
+			 * Logging out
+			 * 
+			 * POST the data now and clear it all when done so that the
+			 * next person to login on this device cannot access or see
+			 * the data of this current account.
+			 * 
+			 */
+			postAccountNow( function() {
+				setAccountData( null);
+				setKidData( null);
+			});
+		}
+	});
+	
 	/*
 	 * Set the widget values of the home page to show the correct
 	 * Kid information.
@@ -405,18 +421,25 @@ $(document).bind('mobileinit', function() {
 	 */
 	var setHomePageWidgets = function() {
 		kid = getKidData();
-		
-		console.log('setHomePageWidgets, kid==' + kid.kidName)
-		
-		if( kid.hasImage)
-			$('#home_portraitImg').prop('src', getImageURL(kid, false));
-		else
-			$('#home_portraitImg').prop('src', 'stylesheets/images/johnny_automatic_girl_and_boy.gif');
-		
 
-		$('#home_childDDL').val( kid.kidName);
-		$('#home_childDDL').selectmenu('refresh');
-		$('#home_totalL').html( getKidTotal(kid));
+		if( kid) {
+			console.log('setHomePageWidgets, kid==' + kid.kidName)
+
+			if( kid.hasImage)
+				$('#home_portraitImg').prop('src', getImageURL(kid, false));
+			else
+				$('#home_portraitImg').prop('src', 'stylesheets/images/johnny_automatic_girl_and_boy.gif');
+
+			$('#home_childDDL').val( kid.kidName).selectmenu('refresh');
+			$('#home_totalL').html( getKidTotal(kid));
+		} else {
+			// clear widgets as we're clearing the kid data
+			console.log( 'clearing kid data');
+			
+			$('#home_portraitImg').prop('src', 'stylesheets/images/johnny_automatic_girl_and_boy.gif');
+			$('#home_childDDL').val( 'new').selectmenu('refresh');
+			$('#home_totalL').html( 0);
+		}
 	}
 	/*
 	 * 
@@ -573,11 +596,18 @@ $(document).bind('mobileinit', function() {
 	var setDetailsWidgets = function() {
 		var kid = getKidData();
 		
-		$('#details_name').val( kid.kidName);
-		$('#details_totalL').html( getKidTotal(kid));
+		if( kid) {
+			$('#details_name').val( kid.kidName);
+			$('#details_totalL').html( getKidTotal(kid));
 		
-		if( kid.hasImage)
-			$('#details_portraitImg').prop('src', getImageURL(kid, true));
+			if( kid.hasImage)
+				$('#details_portraitImg').prop('src', getImageURL(kid, true));
+		} else {
+			// clear the data
+			$('#details_name').val( 'new');
+			$('#details_totalL').html( 0);
+			$('#details_portraitImg').prop('src', 'stylesheets/images/camera.png');
+		}
 	}
 	
 	
