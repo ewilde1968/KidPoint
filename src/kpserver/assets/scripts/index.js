@@ -229,45 +229,43 @@ $(document).bind('mobileinit', function() {
 					// reset account data
 					setAccountData( responseData);
 				}
+				
+				if( callback)
+					callback();
 		});
 	}
 	
-	var ajaxQueue = $({});
+	var postTimeout = 0;
 	var postAccountNow = function( callback) {
-		// there's a narrow window where another post can be queued after
-		// clearing the queue here. Just accept the extraneous write
-		ajaxQueue.clearQueue();
+		if( postTimeout != 0)
+			window.clearTimeout( postTimeout);
+		postTimeout = 0;
+
 		postAccount( callback);
 	}
 	
-	var postQueuedAccount = function(next) {
-		// may have already had an item in the delay interval when last queued
-		// only implement when this is the very last
-		// total delay no greater than 2x
-		if( ajaxQueue.queue().length == 1)
-			postAccount(null);
-
-		// clear the item off the queue
-		if( next)
-			next();
+	var postAccountTriggered = function() {
+		postTimeout = 0;
+		postAccount( null);
 	}
 	
 	/*
 	 * Queue a POST of the account to the server.
 	 * 
 	 * Try to accumulate posts to the point where there is no more activity.
-	 * A good default to start with is 3 seconds of inactivity pushes a post.
+	 * A good default to start with is 5 seconds of inactivity pushes a post.
 	 * 
 	 */
 	var queuePost = function() {
-		var queueInterval = 3000;	// wait 3 seconds between last activity and post
+		var queueInterval = 5000;	// wait 5 seconds between last activity and post
+		console.log( 'queuePost');
 
-		if( ajaxQueue.queue().length < 3) {
-			// queue up the post if there are no more than two in the queue already
-			// this gives a maximum wait of 2x
-			ajaxQueue.delay( queueInterval);
-			ajaxQueue.queue( postAccount);
-		}
+		if( postTimeout != 0)
+			// a timeout already exists.
+			window.clearTimeout( postTimeout);
+			
+		// set the timeout
+		postTimeout = window.setTimeout(postAccountTriggered, queueInterval);
 	}
 
 
@@ -410,6 +408,9 @@ $(document).bind('mobileinit', function() {
 		
 		if( kid.hasImage)
 			$('#home_portraitImg').prop('src', getImageURL(kid, false));
+		else
+			$('#home_portraitImg').prop('src', 'stylesheets/images/johnny_automatic_girl_and_boy.gif');
+		
 
 		$('#home_childDDL').val( kid.kidName);
 		$('#home_childDDL').selectmenu('refresh');
@@ -460,12 +461,16 @@ $(document).bind('mobileinit', function() {
 	$('#details_name').live('change', function( event, ui) {
 		var kid = getKidData();
 		var acctData = getAccountData();
+		console.log( 'details_name.change');
 
+		var newName = $('#details_name').val();
+		console.log( 'new name = ' + newName);
+		
 		// either load another kid already extant or change this kid's kidName
-		var newName = $('#details_name').val();		
 		if( newName != kid.kidName) {
 			$.each( acctData.kids, function(i, item) {
 				if( item.kidName == newName) {
+					console.log( 'matched kid: ' + item.kidName);
 					setKidData( item);
 					return;
 				}
@@ -482,6 +487,7 @@ $(document).bind('mobileinit', function() {
 				 * The "new" kid object needs to be reset, too.
 				 * 
 				 */
+				console.log( 'matched new name');
 				newKid = {
 							'kidName': newName,
 							'events': kid.events,
@@ -499,6 +505,7 @@ $(document).bind('mobileinit', function() {
 				setKidData( kid);	// refresh the kid data and page widgets
 			}
 
+			console.log( 'queueing post');
 			queuePost();
 		}
 	});
@@ -570,6 +577,7 @@ $(document).bind('mobileinit', function() {
 		if( kid.hasImage)
 			$('#details_portraitImg').prop('src', getImageURL(kid, true));
 	}
+	
 	
 	/*
 	 * BROWSEDIALOG initialization and widget events
