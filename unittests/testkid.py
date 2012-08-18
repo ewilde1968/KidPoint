@@ -9,8 +9,8 @@ from google.appengine.ext import db
 import unittest
 import json
 
-from kpserver.model import kid
-from kpserver.model import account
+from model import kid
+from model import account
 
 
 class DemoTestCase(unittest.TestCase):

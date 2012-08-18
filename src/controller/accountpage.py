@@ -6,8 +6,8 @@ Created on Jul 30, 2012
 import webapp2
 import json
 
-from kpserver.model import account
-from kpserver.model import loginerror
+from model import account
+from model import loginerror
 
 
 class AccountPage(webapp2.RequestHandler):

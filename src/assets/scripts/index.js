@@ -1,7 +1,7 @@
 $(document).bind('mobileinit', function() {
 	var localURL = 'http://localhost:8082/';
 	var remoteURL = 'http://kidspointsbeta.appspot.com/';
-	var rootURL = localURL;
+	var rootURL = remoteURL;
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
