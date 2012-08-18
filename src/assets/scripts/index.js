@@ -1,7 +1,7 @@
 $(document).bind('mobileinit', function() {
 	var localURL = 'http://localhost:8082/';
 	var remoteURL = 'http://kidspointsbeta.appspot.com/';
-	var rootURL = remoteURL;
+	var rootURL = localURL;
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
@@ -323,6 +323,7 @@ $(document).bind('mobileinit', function() {
 	
 	
 	$('#createaccountpage').live('pagebeforeshow', function() {
+		$('#create_checkbox').prop({'checked':false}).checkboxradio('refresh');
 		$('#create_addr').val( '');
 		$('#create_password').val( '');
 		$('#create_confirm').val( '');
