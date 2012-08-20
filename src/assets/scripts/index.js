@@ -119,10 +119,7 @@ $(document).bind('mobileinit', function() {
 			
 			return defaultPortrait;
 		}
-			
-		// always add a timestamp to the URL so as to force a refresh when next loading the image
-		//url += '&' + new Date().getTime();
-			
+
 		return url;
 	}
 	
@@ -491,18 +488,21 @@ $(document).bind('mobileinit', function() {
 		var acctData = getAccountData();
 		console.log( 'details_name.change');
 
-		var newName = $('#details_name').val();
+		var newName = $('#details_name').val().trim();
 		console.log( 'new name = ' + newName);
 		
 		// either load another kid already extant or change this kid's kidName
 		if( newName != kid.kidName) {
+			var goHome = false;
 			$.each( acctData.kids, function(i, item) {
 				if( item.kidName == newName) {
 					console.log( 'matched kid: ' + item.kidName);
 					setKidData( item);
-					return;
+					goHome = true;
+					return false;
 				}
 			});
+			if( goHome) return;
 
 			if( kid.kidName == unnamedKidName) {
 				/*
