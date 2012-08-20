@@ -24,35 +24,31 @@ class ImageStorePage(webapp2.RequestHandler):
     '''
     def get(self):
         try:
-            kidKey = self.request.get('kid')
-            k = db.get(kidKey)
+            blobKey = self.request.get('blobKey')
 
-            if not k:
-                raise ImageStoreError( 'no Kid data available')
+            if not blobKey:
+                raise ImageStoreError( 'no blob data available')
 
-            if k.imageBlob:
-                img = images.Image( blob_key=k.imageBlob)
+            img = images.Image( blob_key=blobKey)
 
-                widthInfo = self.request.get('width')
-                if not widthInfo:
-                    width = 320
-                else:
-                    width = int( widthInfo)
-                    
-                heightInfo = self.request.get('height')
-                if not heightInfo:
-                    height = 480
-                else:
-                    height = int( heightInfo)
-                
-                img.resize(width, height)
-                img.im_feeling_lucky()
-                outImg = img.execute_transforms(output_encoding=images.JPEG)
-                
-                self.response.headers['Content-Type'] = "image/jpeg"
-                self.response.out.write( outImg)
+            widthInfo = self.request.get('width')
+            if not widthInfo:
+                width = 320
             else:
-                self.error(404)
+                width = int( widthInfo)
+                    
+            heightInfo = self.request.get('height')
+            if not heightInfo:
+                height = 480
+            else:
+                height = int( heightInfo)
+                
+            img.resize(width, height)
+            img.im_feeling_lucky()
+            outImg = img.execute_transforms(output_encoding=images.JPEG)
+                
+            self.response.headers['Content-Type'] = "image/jpeg"
+            self.response.out.write( outImg)
 
         except ImageStoreError as e:
             self.response.headers['Content-Type'] = "text/json"
@@ -80,6 +76,7 @@ class ImageStoreUpload(blobstore_handlers.BlobstoreUploadHandler):
             k = db.get( kidKey)
 
             logging.debug( 'found kid: ' + k.kidName)
+            k.deleteImage()
             k.setImage( blob_info)
             k.put()
 

@@ -22,7 +22,7 @@ class Kid(db.Model):
     def getJSONDict(self):
         outputDict = { 'kidName': self.kidName, 'key':str(self.key())}
         if self.imageBlob:
-            outputDict['hasImage'] = True
+            outputDict['blobKey'] = str(self.imageBlob.key())
 
         if self.events and len(self.events) > 0:
             outputDict['events'] = []
@@ -38,6 +38,11 @@ class Kid(db.Model):
     
     def setImage(self, imageBI):
         self.imageBlob = imageBI.key()
+        
+    def deleteImage(self):
+        if self and self.imageBlob:
+            self.imageBlob.delete()
+            self.imageBlob = None
         
     def moveToAncestor(self, ancestor):
         if ancestor.is_saved() and self.parent_key() == ancestor.key():

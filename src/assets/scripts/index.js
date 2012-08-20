@@ -102,18 +102,26 @@ $(document).bind('mobileinit', function() {
 		}
 	}
 	
+	var defaultThumbnail = 'stylesheets/images/camera.png';
+	var defaultPortrait = 'stylesheets/images/johnny_automatic_girl_and_boy.gif';
 	var getImageURL = function( kid, thumbnail) {
-		var url = imagestoreURL + '?account="' + getAccountData().key + '"&kid=';
+		var url;
+		if( kid && kid.blobKey) {
+			url = imagestoreURL + '?blobKey=' + kid.blobKey;
 			
-		if( kid.key)
-			url += kid.key;
-		else
-			url += '"' + kid.kidName + '"';
-
-		if( thumbnail)
-			url += '&height=120&width=80';
-		else
-			url += '&height=' + $(window).height() + '&width=' + $(window).width();
+			if( thumbnail)
+				url += '&height=120&width=80';
+			else
+				url += '&height=' + $(window).height() + '&width=' + $(window).width();
+		} else {
+			if( thumbnail)
+				return defaultThumbnail;
+			
+			return defaultPortrait;
+		}
+			
+		// always add a timestamp to the URL so as to force a refresh when next loading the image
+		//url += '&' + new Date().getTime();
 			
 		return url;
 	}
@@ -150,7 +158,6 @@ $(document).bind('mobileinit', function() {
 			
 		$.each(acctData.kids, function(i,k) {
 			kid = { 'kidName':k.kidName,
-					'imageBlobKey':k.imageBlobKey,
 					'key':k.key
 				};
 				
@@ -425,18 +432,14 @@ $(document).bind('mobileinit', function() {
 		if( kid) {
 			console.log('setHomePageWidgets, kid==' + kid.kidName)
 
-			if( kid.hasImage)
-				$('#home_portraitImg').prop('src', getImageURL(kid, false));
-			else
-				$('#home_portraitImg').prop('src', 'stylesheets/images/johnny_automatic_girl_and_boy.gif');
-
+			$('#home_portraitImg').prop('src', getImageURL(kid, false));
 			$('#home_childDDL').val( kid.kidName).selectmenu('refresh');
 			$('#home_totalL').html( getKidTotal(kid));
 		} else {
 			// clear widgets as we're clearing the kid data
 			console.log( 'clearing kid data');
 			
-			$('#home_portraitImg').prop('src', 'stylesheets/images/johnny_automatic_girl_and_boy.gif');
+			$('#home_portraitImg').prop('src', getImageURL(null, false));
 			$('#home_childDDL').val( 'new').selectmenu('refresh');
 			$('#home_totalL').html( 0);
 		}
@@ -578,7 +581,6 @@ $(document).bind('mobileinit', function() {
 			} else {
 				// in webapp so browse for file to upload, first set URL
 				$('#browse_kid').val( getKidData().key);
-				$('#browse_account').val( getAccountData().key);
 				$('#browse_upload').prop( 'action', data.uploadURL)
 				$.mobile.changePage( $('#browsedialog'));
 			}
@@ -600,13 +602,13 @@ $(document).bind('mobileinit', function() {
 			$('#details_name').val( kid.kidName);
 			$('#details_totalL').html( getKidTotal(kid));
 		
-			if( kid.hasImage)
+			if( kid.blobKey)
 				$('#details_portraitImg').prop('src', getImageURL(kid, true));
 		} else {
 			// clear the data
 			$('#details_name').val( 'new');
 			$('#details_totalL').html( 0);
-			$('#details_portraitImg').prop('src', 'stylesheets/images/camera.png');
+			$('#details_portraitImg').prop('src', getImageURL(null, true));
 		}
 	}
 	
@@ -619,9 +621,11 @@ $(document).bind('mobileinit', function() {
 		var options = {
 			clearForm: true,
 			success: function(response, status, xhr, fe) {
-				var kid = getKidData();
-				if( response.kidName == kid.kidName)
-					setKidData( response)
+				var currentAcct = getAccountData();
+				$.each( currentAcct.kids, function(i,k) {
+					if( response.key == k.key)
+						k.blobKey = response.blobKey;	// update the kid in the account record
+				});
 
 				$.mobile.changePage( $('#detailspage'));
 			}
