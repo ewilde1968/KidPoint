@@ -1,7 +1,7 @@
 $(document).bind('mobileinit', function() {
 	var localURL = 'http://localhost:8082/';
 	var remoteURL = 'http://kidspointsbeta.appspot.com/';
-	var rootURL = remoteURL;
+	var rootURL = localURL;
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
@@ -360,6 +360,29 @@ $(document).bind('mobileinit', function() {
 		$('#create_confirm').val( '');
 	});
 
+
+	var ValidateCreateAccountForm = function( addr, pwd, confirm, tou) {
+		// check email field
+		var atpos = addr.indexOf('@');
+		var dotpos = addr.lastIndexOf('.');
+		if( !addr || addr.length > 1024 || addr.length < 5 || atpos < 1 || dotpos < atpos+2 || dotpos+2 >= addr.length)
+			return 'Invalid email address';
+		
+		// check password field
+		if( !pwd || pwd.length > 1024 || pwd.indexOf('/') != -1 || pwd.indexOf('?') != -1)
+			return 'Invalid password. Password cannot contain "/" or "?".';
+		
+		// check password confirmation field
+		if( pwd != confirm)
+			return 'Invalid password confirmation';
+			
+		// check Terms of Use checkbox
+		if( !tou)
+			return 'You must accept the Terms of Use';
+
+		return 'success';
+	}
+	
 	
 	/*
 	 * When clicking create account button verify the account information
@@ -378,9 +401,8 @@ $(document).bind('mobileinit', function() {
 		var confirm = $('#create_confirm').val();
 		var tou = $('#create_checkbox').is(':checked');
 
-		// TODO: better data validation
-		
-		if( tou && acctAddr != null && pwd != null && pwd == confirm) {
+		var validResult = ValidateCreateAccountForm( acctAddr, pwd, confirm, tou);
+		if( validResult == 'success') {
 			// valid data, post account
 			dataOut = JSON.stringify( {
 					"address": acctAddr,
@@ -417,6 +439,10 @@ $(document).bind('mobileinit', function() {
 						$.mobile.changePage( $('#homepage'));
 					}
 				});
+		} else {
+			$('#err_servermainmsg').text('the account you tried to create is invalid. please try again.');
+			$('#err_servermsg').text(validResult);
+			$.mobile.changePage( $('#errdialog'));
 		}
 	});
 	
