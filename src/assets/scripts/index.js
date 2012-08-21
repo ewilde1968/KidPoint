@@ -1,7 +1,7 @@
 $(document).bind('mobileinit', function() {
 	var localURL = 'http://localhost:8082/';
 	var remoteURL = 'http://kidspointsbeta.appspot.com/';
-	var rootURL = localURL;
+	var rootURL = remoteURL;
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
@@ -281,24 +281,25 @@ $(document).bind('mobileinit', function() {
 		$('#login_addr').val( '');
 		$('#login_pwd').val( '');
 		$('#login_errtext').addClass('login_hidden');
+		
+		userID = localStorage.getItem( 'userID');
+		password = localStorage.getItem( 'pwd');
+		
+		if( userID && userID.length > 5 && password)
+			AttemptLogin( userID, password, true)
 	});
-
-
+	
+	
 	/*
-	 * When clicking login button verify and load the account information
-	 * 
-	 * Input available:	account email address
-	 * 
-	 * Output set:	array of kids
-	 * 				each kid has an array of entire pointevent history
+	 * Attempt to login using the given userID and password. If the login fails,
+	 * then either set error messages or return silently, depending on the silent
+	 * argument. This is used for automatic login using persistent credentials as
+	 * well as normal login using user supplied credentials.
 	 * 
 	 */
-	$('#login_loginB').live('vclick', function( event, ui) {
-		var acctAddr = $('#login_addr').val();
-		var pwd= $('#login_pwd').val();
-		
+	var AttemptLogin = function( id, pwd, silent) {
 		dataOut = {
-				"address": acctAddr,
+				"address": id,
 				"password": pwd
 		}
 		$.getJSON( accountURL, dataOut,
@@ -315,13 +316,40 @@ $(document).bind('mobileinit', function() {
 				 * 		kids: array of Kid objects
 				 */
 				if( "errorMsg" in responseData) {
-					$('#login_errtext').text(responseData.errorMsg);
-					$('#login_errtext').removeClass('login_hidden');
+					// login failed, clear the credentials
+					localStorage.removeItem('userID');
+					localStorage.removeItem('pwd');
+					
+					if( !silent) {
+						$('#login_errtext').text(responseData.errorMsg);
+						$('#login_errtext').removeClass('login_hidden');
+					}
 				} else {
+					// login succeeded, store the credentials
+					localStorage.setItem('userID', id);
+					localStorage.setItem('pwd', pwd);
+					
 					setAccountData( responseData);
 					$.mobile.changePage( $('#homepage'));
 				}
 			});
+	}
+
+
+	/*
+	 * When clicking login button verify and load the account information
+	 * 
+	 * Input available:	account email address
+	 * 
+	 * Output set:	array of kids
+	 * 				each kid has an array of entire pointevent history
+	 * 
+	 */
+	$('#login_loginB').live('vclick', function( event, ui) {
+		var acctAddr = $('#login_addr').val();
+		var pwd= $('#login_pwd').val();
+		
+		AttemptLogin( acctAddr, pwd, false);
 	});
 	
 	
@@ -373,10 +401,18 @@ $(document).bind('mobileinit', function() {
 					 * 		kids: array of Kid objects
 					 */
 					if( "errorMsg" in responseData) {
+						// login failed, clear the credentials
+						localStorage.removeItem('userID');
+						localStorage.removeItem('pwd');
+						
 						$('#err_servermainmsg').text('the account you tried to create is invalid. please try again.');
 						$('#err_servermsg').text(responseData.errorMsg);
 						$.mobile.changePage( $('#errdialog'));
 					} else {
+						// login succeeded, store the credentials
+						localStorage.setItem('userID', acctAddr);
+						localStorage.setItem('pwd', pwd);
+
 						setAccountData( responseData);
 						$.mobile.changePage( $('#homepage'));
 					}
