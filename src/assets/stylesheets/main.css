@@ -11,8 +11,8 @@ th {
 	font-family: Arial, Helvetica, sans-serif;
 }
 
-.login_errtext {
-	color: rgba(178,0,54,1.0)
+.errtext {
+	color:#734949;
 }
 
 .login_hidden {

@@ -103,16 +103,12 @@ $(document).bind('mobileinit', function() {
 	}
 	
 	var defaultThumbnail = 'stylesheets/images/camera.png';
-	var defaultPortrait = 'stylesheets/images/johnny_automatic_girl_and_boy.gif';
-	var getImageURL = function( kid, thumbnail) {
+	//var defaultPortrait = 'stylesheets/images/johnny_automatic_girl_and_boy.gif';
+	var defaultPortrait = '';
+	var getImageURL = function( kid, width, height, thumbnail) {
 		var url;
 		if( kid && kid.blobKey) {
-			url = imagestoreURL + '?blobKey=' + kid.blobKey;
-			
-			if( thumbnail)
-				url += '&height=120&width=80';
-			else
-				url += '&height=' + $(window).height() + '&width=' + $(window).width();
+			url = imagestoreURL + '?blobKey=' + kid.blobKey + '&height=' + height + '&width=' + width;
 		} else {
 			if( thumbnail)
 				return defaultThumbnail;
@@ -277,14 +273,20 @@ $(document).bind('mobileinit', function() {
 	 * 
 	 * Clear login information when loading the login or create account pages
 	 */
-	$('#loginpage').live('pagebeforeshow', function() {
+	$('#loginpage').live('pageshow', function() {
 		$('#login_addr').val( '');
 		$('#login_pwd').val( '');
-		$('#login_errtext').addClass('login_hidden');
+		$('#login_errtext').addClass('ui-hidden-accessible');
 		
-		userID = localStorage.getItem( 'userID');
-		password = localStorage.getItem( 'pwd');
-		
+		// make sure height takes up full screen for background drawing
+		var winHeight = $(window).height();
+		var headerHeight = $('#loginheader').height();
+		var contentHeight = $('#logincontent').height();
+		if( contentHeight < (winHeight - headerHeight))
+			$('#logincontent').height( winHeight - headerHeight);
+
+		var userID = localStorage.getItem( 'userID');
+		var password = localStorage.getItem( 'pwd');
 		if( userID && userID.length > 5 && password)
 			AttemptLogin( userID, password, true)
 	});
@@ -322,7 +324,7 @@ $(document).bind('mobileinit', function() {
 					
 					if( !silent) {
 						$('#login_errtext').text(responseData.errorMsg);
-						$('#login_errtext').removeClass('login_hidden');
+						$('#login_errtext').removeClass('ui-hidden-accessible');
 					}
 				} else {
 					// login succeeded, store the credentials
@@ -353,7 +355,7 @@ $(document).bind('mobileinit', function() {
 	});
 	
 	
-	$('#createaccountpage').live('pagebeforeshow', function() {
+	$('#createaccountpage').live('pageshow', function() {
 		$('#create_checkbox').prop({'checked':false}).checkboxradio('refresh');
 		$('#create_addr').val( '');
 		$('#create_password').val( '');
@@ -457,23 +459,40 @@ $(document).bind('mobileinit', function() {
 		if( getKidData() == null)
 			setDefaultKidData();
 			
+		// make sure height takes up full screen for background drawing
+		var winHeight = $(window).height();
+		var contentHeight = $('#homecontent').height();
+		if( contentHeight < winHeight)
+			$('#homecontent').height( winHeight);
+
 		setHomePageWidgets();
 	});
 	
 	$('#homepage').live('pagehide', function(event,ui) {
-		if( ui.nextPage[0].id == 'loginpage') {
+		if( ui.nextPage[0].id != 'detailspage') {
 			/*
-			 * Logging out
+			 * Logging out or closing down the application
 			 * 
-			 * POST the data now and clear it all when done so that the
-			 * next person to login on this device cannot access or see
-			 * the data of this current account.
+			 * POST the data now.
 			 * 
 			 */
 			postAccountNow( function() {
 				setAccountData( null);
 				setKidData( null);
 			});
+		}
+		
+		if( ui.nextPage[0].id == 'loginpage') {
+			/*
+			 * Logging out
+			 * 
+			 * remove the stored credentials and clear out data widgets
+			 * 
+			 */
+			localStorage.removeItem('userID');
+			localStorage.removeItem('pwd');
+			
+			setKidData(null);
 		}
 	});
 	
@@ -488,17 +507,18 @@ $(document).bind('mobileinit', function() {
 	var setHomePageWidgets = function() {
 		kid = getKidData();
 
+		var url = getImageURL(kid, $('#homecontent').width(), $('#homecontent').height(), false);
+		$('#home_portraitImg').prop('src', url);
+
 		if( kid) {
 			console.log('setHomePageWidgets, kid==' + kid.kidName)
 
-			$('#home_portraitImg').prop('src', getImageURL(kid, false));
 			$('#home_childDDL').val( kid.kidName).selectmenu('refresh');
 			$('#home_totalL').html( getKidTotal(kid));
 		} else {
 			// clear widgets as we're clearing the kid data
 			console.log( 'clearing kid data');
 			
-			$('#home_portraitImg').prop('src', getImageURL(null, false));
 			$('#home_childDDL').val( 'new').selectmenu('refresh');
 			$('#home_totalL').html( 0);
 		}
@@ -660,17 +680,18 @@ $(document).bind('mobileinit', function() {
 	var setDetailsWidgets = function() {
 		var kid = getKidData();
 		
+		var url = getImageURL(kid, 80, 120, true);
 		if( kid) {
 			$('#details_name').val( kid.kidName);
 			$('#details_totalL').html( getKidTotal(kid));
 		
 			if( kid.blobKey)
-				$('#details_portraitImg').prop('src', getImageURL(kid, true));
+				$('#details_portraitImg').prop('src', url);
 		} else {
 			// clear the data
 			$('#details_name').val( 'new');
 			$('#details_totalL').html( 0);
-			$('#details_portraitImg').prop('src', getImageURL(null, true));
+			$('#details_portraitImg').prop('src', url);
 		}
 	}
 	

@@ -10,7 +10,8 @@
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"> 
 
-	<link rel="stylesheet" href="stylesheets/jquery.mobile-1.1.1.min.css" />
+	<link rel="stylesheet" href="stylesheets/KidsPointsBeta.min.css" />
+	<link rel="stylesheet" href="stylesheets/jquery.mobile.structure-1.1.1.min.css" />
 	<link rel="stylesheet" href="stylesheets/main.css" />
 	<script src="scripts/jquery-1.7.2.min.js"></script>
 <!-- Uncomment this for posting to PhoneGap Build
@@ -26,11 +27,11 @@
 
 <div data-role="page" id="loginpage">
 
-	<div data-role="header">
+	<div data-role="header" id="loginheader" data-theme="a">
 		<h1>kid points</h1>
 	</div><!-- /header -->
 
-	<div data-role="content">
+	<div data-role="content" data-theme="a" id="logincontent">
 		<div data-role="fieldcontain">
 			<label for="login_addr">email:</label>
 			<input type="email" id="login_addr" name="login_addr" data-mini="true" />
@@ -39,9 +40,9 @@
 			<label for="login_pwd">password:</label>
 			<input type="email" id="login_pwd" name="login_pwd" data-mini="true" />
 		</div>
-		<label id="login_errtext" class="login_errtext login_hidden">invalid email address or password</label>
-		<a href="#" id="login_loginB" data-role="button" data-mini="true" data-theme="b">login</a>
-		<a href="#createaccountpage" id="login_createB" data-role="button" data-mini="true" data-theme="b">create new account</a>
+		<label id="login_errtext" class="errtext">invalid email address or password</label>
+		<a href="#" id="login_loginB" data-role="button" data-mini="true">login</a>
+		<a href="#createaccountpage" id="login_createB" data-role="button" data-mini="true">create new account</a>
 	</div><!-- /content -->
 
 </div><!-- /page -->
@@ -50,11 +51,11 @@
 
 <div data-role="page" id="createaccountpage" data-add-back-btn="true" data-back-btn-text="Cancel">
 
-	<div data-role="header">
+	<div data-role="header" data-theme="a">
 		<h1>Kids Points</h1>
 	</div><!-- /header -->
 
-	<div data-role="content">
+	<div data-role="content" data-theme="a">
 		<div data-role="fieldcontain">
 			<label for="create_addr">email:</label>
 			<input type="email" id="create_addr" name="create_addr" placeholder="email address" data-mini="true" />
@@ -80,7 +81,7 @@
 	   			<label for="create_checkbox">I agree</label>
     		</fieldset>
 		</div>
-		<a href="#" id="create_loginB" data-role="button" data-mini="true" data-theme="b">create account</a>
+		<a href="#" id="create_loginB" data-role="button" data-mini="true">create account</a>
 	</div><!-- /content -->
 
 </div><!-- /page -->
@@ -89,11 +90,11 @@
 
 <div data-role="dialog" id="errdialog">
 
-	<div data-role="header">
+	<div data-role="header" data-theme="b">
 		<h3>error</h3>
 	</div><!-- /header -->
 
-	<div data-role="content">
+	<div data-role="content" data-theme="b">
 		<p id="err_servermainmsg">the account you tried to create is invalid. please try again.</p>
 		<br />
 		<p id="err_servermsg"></p>
@@ -105,17 +106,17 @@
 
 <div data-role="page" id="homepage">
 
-	<div data-role="content">
-		<div class="ui-grid-b">
-			<a href="#loginpage" data-role="button" data-icon="arrow-l" data-mini="true" class="ui-block-a">logout</a>
+	<div data-role="content" data-theme="a" id="homecontent">
+		<img src="" id="home_portraitImg" />
+		<div class="ui-grid-c">
+			<a href="#loginpage" class="ui-block-a" data-role="button" data-mini="true">logout</a>
 		</div>
-		<img src="stylesheets/images/johnny_automatic_girl_and_boy.gif" id="home_portraitImg" />
 		<div class="home_childDDLDiv">
 			<label for="home_childDDL" class="ui-hidden-accessible">child name</label>
 			<select id="home_childDDL" name="home_childDDL" data-mini="true" data-native-menu ="false">
 			</select>
 		</div>
-		<a href="#detailspage" data-role="button" data-icon="arrow-r" data-mini="true"
+		<a href="#detailspage" data-role="button" data-icon="arrow-r"
 			data-iconpos="notext" data-inline="true" id="home_detailsB">details</a>
 		<div class="home_bottomrow">
 			<label id="home_totalL">0</label>
@@ -134,7 +135,7 @@
 
 <div data-role="page" id="detailspage">
 
-	<div data-role="content">
+	<div data-role="content" data-theme="a">
 		<div class="ui-grid-b">
 			<a href="#homepage" data-role="button" data-icon="arrow-l" data-mini="true" class="ui-block-a">home</a>
 		</div>
@@ -152,11 +153,11 @@
 
 <div data-role="dialog" id="browsedialog">
 
-	<div data-role="header">
+	<div data-role="header" data-theme="a">
 		<h3>browse for portrait</h3>
 	</div><!-- /header -->
 
-	<div data-role="content">
+	<div data-role="content" data-theme="a">
 		<form action="willchange" method="post" enctype="multipart/form-data" id="browse_upload" data-ajax="false">
 			<div data-role="fieldcontain">
 				<label for="browse_fileInput">filename:</label>
