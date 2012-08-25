@@ -2,6 +2,7 @@ $(document).bind('mobileinit', function() {
 	var localURL = 'http://localhost:8082/';
 	var remoteURL = 'http://kidspointsbeta.appspot.com/';
 	var rootURL = localURL;
+	var loginURL = rootURL + 'login';
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
@@ -31,9 +32,11 @@ $(document).bind('mobileinit', function() {
 	var setKidData = function( kid) {
 		currentKid = kid;
 
-		// set all page widgets to reflect new selected kid		
-		setHomePageWidgets();
-		setDetailsWidgets();
+		// set all page widgets to reflect new selected kid
+		if( $.mobile.activePage[0] == 'homepage')
+			setHomePageWidgets();
+		else if( $.mobile.activePage[0] == 'detailspage' )
+			setDetailsWidgets();
 	}
 	
 	var getKidData = function() {
@@ -270,13 +273,20 @@ $(document).bind('mobileinit', function() {
 
 
 	/*
+	 * Login page is showing.
 	 * 
-	 * Clear login information when loading the login or create account pages
+	 * If login information cached, then load it and attempt to login. Also
+	 * set the window height so that the background fills the screen.
+	 * 
 	 */
 	$('#loginpage').live('pageshow', function() {
-		$('#login_addr').val( '');
-		$('#login_pwd').val( '');
-		$('#login_errtext').addClass('ui-hidden-accessible');
+		// load the cached credentials
+		var userID = localStorage.getItem( 'userID');
+		var password = localStorage.getItem( 'pwd');
+
+		$('#login_addr').val( userID ? userID : '');
+		$('#login_pwd').val( password ? password : '');
+		$('#login_errtext').css('visibility','hidden');
 		
 		// make sure height takes up full screen for background drawing
 		var winHeight = $(window).height();
@@ -285,170 +295,129 @@ $(document).bind('mobileinit', function() {
 		if( contentHeight < (winHeight - headerHeight))
 			$('#logincontent').height( winHeight - headerHeight);
 
-		var userID = localStorage.getItem( 'userID');
-		var password = localStorage.getItem( 'pwd');
-		if( userID && userID.length > 5 && password)
-			AttemptLogin( userID, password, true)
+		if( userID && password)
+			SubmitLoginForm( true)
 	});
 	
-	
 	/*
-	 * Attempt to login using the given userID and password. If the login fails,
+	 * Attempt to login using the form's userID and password. If the login fails,
 	 * then either set error messages or return silently, depending on the silent
 	 * argument. This is used for automatic login using persistent credentials as
 	 * well as normal login using user supplied credentials.
 	 * 
 	 */
-	var AttemptLogin = function( id, pwd, silent) {
-		dataOut = {
-				"address": id,
-				"password": pwd
-		}
-		$.getJSON( accountURL, dataOut,
-			function( responseData, status, xfr) {
-				/*
-				 * All responses in JSON. Possible response objects include:
-				 * 
-				 * error object:
-				 * 		errorMsg: string to show
-				 * 
-				 * account object:
-				 * 		address: email address for account
-				 * 		password: password for account
-				 * 		kids: array of Kid objects
-				 */
-				if( "errorMsg" in responseData) {
+	var SubmitLoginForm = function(silent) {
+		var options = {
+			clearForm: true,
+			dataType: 'json',
+			url: loginURL,
+			success: function(response, status, xhr, fe) {
+				if( "errorMsg" in response) {
 					// login failed, clear the credentials
 					localStorage.removeItem('userID');
 					localStorage.removeItem('pwd');
 					
 					if( !silent) {
-						$('#login_errtext').text(responseData.errorMsg);
-						$('#login_errtext').removeClass('ui-hidden-accessible');
+						$('#login_errtext').text(response.errorMsg);
+						$('#login_errtext').css('visibility','visible');
 					}
 				} else {
 					// login succeeded, store the credentials
-					localStorage.setItem('userID', id);
-					localStorage.setItem('pwd', pwd);
+					localStorage.setItem('userID', response.address);
+					localStorage.setItem('pwd', response.password);
 					
-					setAccountData( responseData);
+					setAccountData( response);
 					$.mobile.changePage( $('#homepage'));
 				}
-			});
+			},
+			error: function(response, status, xhr, fe) {
+				if( !silent) {
+					$('#login_errtext').text('server error');
+					$('#login_errtext').css('visibility','visible');
+				}
+			}
+		};
+		$('#loginform').ajaxSubmit(options);
 	}
 
-
-	/*
-	 * When clicking login button verify and load the account information
-	 * 
-	 * Input available:	account email address
-	 * 
-	 * Output set:	array of kids
-	 * 				each kid has an array of entire pointevent history
-	 * 
-	 */
 	$('#login_loginB').live('vclick', function( event, ui) {
-		var acctAddr = $('#login_addr').val();
-		var pwd= $('#login_pwd').val();
-		
-		AttemptLogin( acctAddr, pwd, false);
-	});
-	
-	
-	$('#createaccountpage').live('pageshow', function() {
-		$('#create_checkbox').prop({'checked':false}).checkboxradio('refresh');
-		$('#create_addr').val( '');
-		$('#create_password').val( '');
-		$('#create_confirm').val( '');
+		SubmitLoginForm(false);
 	});
 
 
-	var ValidateCreateAccountForm = function( addr, pwd, confirm, tou) {
+	var ValidateCreateAccountForm = function() {
 		// check email field
+		var addr = $('#create_addr').val();
 		var atpos = addr.indexOf('@');
 		var dotpos = addr.lastIndexOf('.');
 		if( !addr || addr.length > 1024 || addr.length < 5 || atpos < 1 || dotpos < atpos+2 || dotpos+2 >= addr.length)
 			return 'Invalid email address';
-		
+
 		// check password field
+		var pwd = $('#create_password').val();
 		if( !pwd || pwd.length > 1024 || pwd.indexOf('/') != -1 || pwd.indexOf('?') != -1)
 			return 'Invalid password. Password cannot contain "/" or "?".';
-		
+
 		// check password confirmation field
+		var confirm = $('#create_confirm').val();
 		if( pwd != confirm)
 			return 'Invalid password confirmation';
-			
+
 		// check Terms of Use checkbox
+		var tou = $('#create_checkbox').is(':checked');
 		if( !tou)
 			return 'You must accept the Terms of Use';
 
 		return 'success';
 	}
-	
-	
-	/*
-	 * When clicking create account button verify the account information
-	 * and then send the post event to the service.
-	 * 
-	 * Input available:	account email address
-	 * 
-	 * Output set:	array of kids
-	 * 				each kid has an array of entire pointevent history
-	 * 
-	 * Errors: Can raise a validation error or an "account already exists" error
-	 */
-	$('#create_loginB').live('vclick', function( event, ui) {
-		var acctAddr = $('#create_addr').val();
-		var pwd = $('#create_password').val();
-		var confirm = $('#create_confirm').val();
-		var tou = $('#create_checkbox').is(':checked');
 
-		var validResult = ValidateCreateAccountForm( acctAddr, pwd, confirm, tou);
-		if( validResult == 'success') {
-			// valid data, post account
-			dataOut = JSON.stringify( {
-					"address": acctAddr,
-					"password": pwd,
-					"create": true
-			});
-			$.post( accountURL, dataOut,
-				function(responseData,status,xhr) {
-					/*
-					 * All responses in JSON. Possible response objects include:
-					 * 
-					 * error object:
-					 * 		errorMsg: string to show
-					 * 
-					 * account object:
-					 * 		address: email address for account
-					 * 		password: password for account
-					 * 		kids: array of Kid objects
-					 */
-					if( "errorMsg" in responseData) {
+	$('#create_loginB').live('vclick', function( event, ui) {
+		var valid = ValidateCreateAccountForm();
+
+		if( valid == 'success') {
+			var options = {
+				clearForm: true,
+				dataType: 'json',
+				url: loginURL,
+				success: function(response, status, xhr, fe) {
+					// clear the TOU checkbox to be certain of recent acceptance
+					$('#create_checkbox').prop({'checked':false}).checkboxradio('refresh');
+
+					if( "errorMsg" in response) {
 						// login failed, clear the credentials
 						localStorage.removeItem('userID');
 						localStorage.removeItem('pwd');
-						
+
 						$('#err_servermainmsg').text('the account you tried to create is invalid. please try again.');
-						$('#err_servermsg').text(responseData.errorMsg);
+						$('#err_servermsg').text(response.errorMsg);
 						$.mobile.changePage( $('#errdialog'));
 					} else {
 						// login succeeded, store the credentials
-						localStorage.setItem('userID', acctAddr);
-						localStorage.setItem('pwd', pwd);
+						localStorage.setItem('userID', response.address);
+						localStorage.setItem('pwd', response.password);
 
-						setAccountData( responseData);
+						setAccountData( response);
 						$.mobile.changePage( $('#homepage'));
 					}
-				});
+				},
+				error: function(response, status, xhr, fe) {
+					// clear the TOU checkbox to be certain of recent acceptance
+					$('#create_checkbox').prop({'checked':false}).checkboxradio('refresh');
+
+					$('#err_servermainmsg').text('the account you tried to create is invalid. please try again.');
+					$('#err_servermsg').text('server error');
+					$.mobile.changePage( $('#errdialog'));
+				}
+			};
+			$('#createaccountform').ajaxSubmit(options);
 		} else {
 			$('#err_servermainmsg').text('the account you tried to create is invalid. please try again.');
-			$('#err_servermsg').text(validResult);
+			$('#err_servermsg').text(valid);
 			$.mobile.changePage( $('#errdialog'));
 		}
 	});
-	
-	
+
+
 	/*
 	 *
 	 * HOMEPAGE page change handling

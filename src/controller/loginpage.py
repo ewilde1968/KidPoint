@@ -1,5 +1,5 @@
 '''
-Created on Jul 30, 2012
+Created on Aug 25, 2012
 
 @author: ewilde
 '''
@@ -10,9 +10,9 @@ from model import account
 from model import loginerror
 
 
-class AccountPage(webapp2.RequestHandler):
+class LoginPage(webapp2.RequestHandler):
     '''
-    API to get and post accounts to the Kid Points Beta
+    API to login and create accounts
     '''
     def get(self):
         address = self.request.get("login_addr")
@@ -36,12 +36,14 @@ class AccountPage(webapp2.RequestHandler):
         self.response.headers['Content-Type'] = "text/json";
 
     def post(self):
-        bodybs = self.request.body;
-        if not bodybs or len(bodybs) < 1:
-            raise ValueError( 'No JSON object in AccountPage:post.')
+        address = self.request.get("create_addr")
+        pwd = self.request.get("create_password")
 
         try:
-            acct = json.JSONDecoder(object_hook=account.fromJSON).decode(bodybs)
+            if account.getAccount(address):
+                raise loginerror.LoginError('account already exists')
+            
+            acct = account.createAccount(address, pwd)
             if acct:
                 acct.put()      # write to the datastore
                 outString = acct.toJSON()
@@ -55,4 +57,3 @@ class AccountPage(webapp2.RequestHandler):
             self.response.out.write('{"errorMsg":"unexpected error in AccountPage POST."}')
 
         self.response.headers['Content-Type'] = "text/json";
-        

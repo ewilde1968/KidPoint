@@ -32,16 +32,18 @@
 	</div><!-- /header -->
 
 	<div data-role="content" data-theme="a" id="logincontent">
-		<div data-role="fieldcontain">
-			<label for="login_addr">email:</label>
-			<input type="email" id="login_addr" name="login_addr" data-mini="true" />
-		</div>
-		<div data-role="fieldcontain">
-			<label for="login_pwd">password:</label>
-			<input type="email" id="login_pwd" name="login_pwd" data-mini="true" />
-		</div>
-		<label id="login_errtext" class="errtext">invalid email address or password</label>
-		<a href="#" id="login_loginB" data-role="button" data-mini="true">login</a>
+		<form action="willchange" method="get" data-ajax="false" id="loginform">
+			<div data-role="fieldcontain">
+				<label for="login_addr">email:</label>
+				<input type="email" id="login_addr" name="login_addr" data-mini="true" required />
+			</div>
+			<div data-role="fieldcontain">
+				<label for="login_pwd">password:</label>
+				<input type="text" id="login_pwd" name="login_pwd" data-mini="true" required />
+			</div>
+			<p id="login_errtext" class="errtext">invalid email address or password</p>
+			<a href="#" id="login_loginB" data-role="button" data-mini="true">login</a>
+		</form>
 		<a href="#createaccountpage" id="login_createB" data-role="button" data-mini="true">create new account</a>
 	</div><!-- /content -->
 
@@ -56,32 +58,33 @@
 	</div><!-- /header -->
 
 	<div data-role="content" data-theme="a">
-		<div data-role="fieldcontain">
-			<label for="create_addr">email:</label>
-			<input type="email" id="create_addr" name="create_addr" placeholder="email address" data-mini="true" />
-		</div>
-		<div data-role="fieldcontain">
-			<label for="create_password">password:</label>
-			<input type="text" id="create_password" name="create_password" placeholder="password" data-mini="true" />
-		</div>
-		<div data-role="fieldcontain">
-			<label for="create_confirm">confirm password:</label>
-			<input type="text" id="create_confirm" name="create_confirm" placeholder="retype password" data-mini="true" />
-		</div>
-		<div data-role="collapsible" data-mini="true">
-			<h3>terms of use</h3>
-			<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam a sapien vitae nulla gravida ornare vel a ipsum. Curabitur id turpis eget dolor laoreet egestas. Mauris eleifend arcu non magna viverra sit amet pellentesque nulla adipiscing. Vivamus lectus turpis, pulvinar vel molestie vel, adipiscing lobortis ligula. Fusce hendrerit nunc id lorem auctor consectetur. Suspendisse potenti. Fusce non ante ut purus fermentum convallis id hendrerit arcu. Nunc rhoncus eros ut libero porttitor dictum. Morbi et viverra nulla. Curabitur lacus massa, tincidunt in consectetur aliquam, adipiscing eu ipsum.</p>
-			<p>Fusce neque sapien, pretium at laoreet eu, pulvinar vitae nunc. In placerat blandit libero, eu congue metus auctor eget. Fusce vitae eros nibh, at feugiat nulla. Sed ac tortor rhoncus justo lacinia ullamcorper. Donec egestas convallis tortor quis auctor. Ut eu ante felis. In sem orci, malesuada eget volutpat et, rhoncus eget lacus. Etiam dolor arcu, ultricies eu vestibulum et, ultricies vitae odio. Nulla facilisi. Morbi eu dictum lacus. Nunc non nibh et justo pretium laoreet.</p>
-			<p>Mauris ultricies ipsum a magna tristique viverra. Praesent ut eros vel lorem laoreet dignissim. Proin a accumsan elit. Praesent nec sem lectus. Duis nec justo a neque sollicitudin ultrices. Nullam in sem ut dolor pretium aliquet. Curabitur dui leo, accumsan id dictum a, pretium vel purus. Quisque et felis nulla. Aliquam auctor lacinia justo, quis condimentum est rhoncus sed. Nullam a elit ipsum. Mauris sed massa ac quam bibendum mattis sed nec velit. Mauris sed faucibus neque. Fusce tincidunt velit ac magna feugiat imperdiet. Fusce et dui risus, sit amet rutrum lectus.</p>
-		</div>
-		<div data-role="fieldcontain">
-    		<fieldset data-role="controlgroup">
-	   			<legend>agree to the terms</legend>
-				<input type="checkbox" name="create_checkbox" id="create_checkbox" data-mini="true" />
-	   			<label for="create_checkbox">I agree</label>
-    		</fieldset>
-		</div>
-		<a href="#" id="create_loginB" data-role="button" data-mini="true">create account</a>
+		<form action="willchange" method="post" data-ajax="false" id="createaccountform">
+			<div data-role="fieldcontain">
+				<label for="create_addr">email:</label>
+				<input type="email" id="create_addr" name="create_addr" placeholder="email address" data-mini="true" required />
+			</div>
+			<div data-role="fieldcontain">
+				<label for="create_password">password:</label>
+				<input type="text" id="create_password" name="create_password" placeholder="password" data-mini="true" required />
+			</div>
+			<div data-role="fieldcontain">
+				<label for="create_confirm">confirm password:</label>
+				<input type="text" id="create_confirm" name="create_confirm" placeholder="retype password" data-mini="true" required />
+			</div>
+			<div data-role="collapsible" data-mini="true">
+				<h3>terms of use</h3>
+				<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam a sapien vitae nulla gravida ornare vel a ipsum. Curabitur id turpis eget dolor laoreet egestas. Mauris eleifend arcu non magna viverra sit amet pellentesque nulla adipiscing. Vivamus lectus turpis, pulvinar vel molestie vel, adipiscing lobortis ligula. Fusce hendrerit nunc id lorem auctor consectetur. Suspendisse potenti. Fusce non ante ut purus fermentum convallis id hendrerit arcu. Nunc rhoncus eros ut libero porttitor dictum. Morbi et viverra nulla. Curabitur lacus massa, tincidunt in consectetur aliquam, adipiscing eu ipsum.</p>
+				<p>Fusce neque sapien, pretium at laoreet eu, pulvinar vitae nunc. In placerat blandit libero, eu congue metus auctor eget. Fusce vitae eros nibh, at feugiat nulla. Sed ac tortor rhoncus justo lacinia ullamcorper. Donec egestas convallis tortor quis auctor. Ut eu ante felis. In sem orci, malesuada eget volutpat et, rhoncus eget lacus. Etiam dolor arcu, ultricies eu vestibulum et, ultricies vitae odio. Nulla facilisi. Morbi eu dictum lacus. Nunc non nibh et justo pretium laoreet.</p>
+			</div>
+			<div data-role="fieldcontain">
+    			<fieldset data-role="controlgroup">
+	   				<legend>agree to the terms</legend>
+					<input type="checkbox" id="create_checkbox" name="create_checkbox" id="create_checkbox" data-mini="true" required />
+	   				<label for="create_checkbox">I agree</label>
+	    		</fieldset>
+			</div>
+			<a href="#" id="create_loginB" data-role="button" data-mini="true">create account</a>
+		</form>
 	</div><!-- /content -->
 
 </div><!-- /page -->
