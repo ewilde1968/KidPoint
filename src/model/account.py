@@ -38,6 +38,39 @@ class Account(db.Model):
         outputDict = self.getJSONDict();
         result = json.dumps( outputDict)
         return result
+    
+    def Merge(self, inDict):
+        for k in inDict:
+            v = inDict[k]
+            if k == 'address':
+                self.address = v
+            elif k == 'password':
+                self.password = v
+            elif k == 'currentKid':
+                self.currentKid = v
+            elif k == 'kids':
+                if not self.kids:
+                    self.kids = []
+
+                for kidObj in v:
+                    # merge kid or create new kid
+                    mustAppend = False
+                    if 'key' in kidObj:
+                        newKid = kid.Kid.get(kidObj['key'])
+                        # make sure the kid has the right ancestor
+                        if newKid.parent() != self:
+                            newKid = newKid.moveToAncestor(self)
+                            mustAppend = True
+                    else:
+                        # create a new kid, must have a kidName
+                        newKid = kid.Kid( kidName=kidObj['kidName'], parent=self)
+                        mustAppend = True
+
+                    newKid.Merge(kidObj)
+                    newKid.put()
+
+                    if mustAppend:
+                        self.kids.append(newKid.key())
 
 
 def getAccount( emailAddr, pwd = None):
@@ -58,78 +91,3 @@ def getAccount( emailAddr, pwd = None):
 def createAccount( emailAddr, pwd):
     result = Account(address=emailAddr, password=pwd)
     return result
-
-
-def fromJSON( jo):
-    '''
-    Decoder for Account JSON objects.
-    
-    Required components: address
-    Conditionally required components: password
-    Optional components: key, create, all other components
-    
-    If the required address component is not a part of the JSON string, then
-    assume it is a sub-object. The only sub-object available is the Kid.
-    
-    If the create member is true then this is an account creation attempt. In
-    such a case, if the account already exists throw and exception.
-    '''
-    try:
-        if not 'address' in jo:
-            try:
-                # try to create a Kid instead
-                return kid.fromJSON(jo)
-            except:
-                raise
-                
-        # looks like its an Account object, create one
-        result = None
-        if 'key' in jo:
-            result = Account.get( jo['key'])
-
-        # get the password string for future use
-        pwd = None
-        if 'password' in jo:
-            pwd = jo['password']
-            
-        # check to see if this an account creation attempt
-        if 'create' in jo and (result or getAccount( jo['address'])):
-            raise loginerror.LoginError( 'account already exists')
-            
-        # address must be in jo
-        if not result:
-            result = getAccount( jo['address'], pwd) 
-            
-            if not result and 'create' in jo:
-                result = createAccount( jo['address'], pwd)
-        else:
-            result.address = jo['address']
-
-        # result must now exist
-        if pwd:
-            result.password = pwd
-
-        if 'currentKid' in jo:
-            result.currentKid = jo['currentKid']
-
-        if 'kids' in jo:
-            if not result.kids:
-                result.kids = []
-            for k in jo['kids']:
-                # all Kids are now created
-                append = not k.is_saved()
-                
-                if append:
-                    # make sure the kid has the right ancestor
-                    if not result.is_saved():
-                        result.put()    # initial save so result can be used as an ancestor
-
-                    newKid = k.moveToAncestor(result)
-                    result.kids.append( newKid.key())
-                else:
-                    k.put() # just update the exist kid
-
-        return result
-
-    except:
-        raise

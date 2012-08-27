@@ -43,7 +43,15 @@ class Kid(db.Model):
         if self and self.imageBlob:
             self.imageBlob.delete()
             self.imageBlob = None
+    
+    def addPointEvent(self, pointCount):
+        newE = pointevent.PointEvent( parent=self.parent(), points=pointCount)
+        newE.put()
         
+        if not self.events:
+            self.events = []
+        self.events.append( newE.key())
+
     def moveToAncestor(self, ancestor):
         if ancestor.is_saved() and self.parent_key() == ancestor.key():
             return self
@@ -63,57 +71,15 @@ class Kid(db.Model):
         newKid.put()
         return newKid
 
-
-def fromJSON( jo):
-    '''
-    Decoder for Kid JSON objects.
-    
-    Required components: kidName
-    Optional components: key, all other member variables
-    
-    If the required kidName component is not a part of the JSON string, then
-    assume it is a sub-object. The only sub-object available is the pointevent.
-    
-    Any events passed as part of the JSON string are considered new pointevents
-    for the kid.
-    '''
-    try:
-        if not 'kidName' in jo:
-            # try to create a pointevent instead
-            try:
-                peResult = pointevent.fromJSON(jo)
-                return peResult
-            except:
-                raise
-                
-        # looks like its a Kid object, create one
-        result = None
-        if 'key' in jo:
-            result = Kid.get( jo['key'])
-
-        # kidName must be in jo
-        if not result:
-            result = Kid( kidName=jo['kidName'])
-            result.touched = True
-        elif result.kidName != jo['kidName']:
-            result.kidName = jo['kidName']
-            result.touched = True
-
-        # result must be created by this time
-        # image blob handled through imagestorepage API
-
-        if 'events' in jo:
-            # any events passed into the JSON string must be new ones
-            result.touched = True
-
-            if not result.events:
-                result.events = []
-            for e in jo['events']:
-                if e:   # could have None object if new point object had zero points
-                    # all are PointEvent objects at this point
-                    e.put() # save these new events in the datastore
-                    result.events.append( e.key())
-
-        return result
-    except:
-        raise
+    def Merge(self,inDict):
+        for k in inDict:
+            v = inDict[k]
+            if k == 'kidName':
+                self.kidName = v
+            if k == 'events':
+                # must be a new event and contain points
+                newE = pointevent.PointEvent(parent=self.parent(),points=v['points'])
+                newE.put()
+                self.events.append(newE.key())
+            if k == 'imageBlob':
+                self.imageBlob = v

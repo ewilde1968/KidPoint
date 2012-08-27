@@ -6,6 +6,8 @@ $(document).bind('mobileinit', function() {
 	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
+	var kidURL = rootURL + 'kid';
+	var queueInterval = 5000;	// wait 5 seconds between last activity and post
 	
 	var isPhone = function() {
 		return navigator && navigator.camera;
@@ -29,14 +31,19 @@ $(document).bind('mobileinit', function() {
 	}
 
 	var currentKid = null;
+	var refreshKidData = function(kid) {
+		if( currentKid == kid) {
+			// set all page widgets to reflect new selected kid
+			if( $.mobile.activePage[0] == 'homepage')
+				setHomePageWidgets();
+			else if( $.mobile.activePage[0] == 'detailspage' )
+				setDetailsWidgets();
+		}
+	}
+
 	var setKidData = function( kid) {
 		currentKid = kid;
-
-		// set all page widgets to reflect new selected kid
-		if( $.mobile.activePage[0] == 'homepage')
-			setHomePageWidgets();
-		else if( $.mobile.activePage[0] == 'detailspage' )
-			setDetailsWidgets();
+		refreshKidData( kid);
 	}
 	
 	var getKidData = function() {
@@ -142,12 +149,99 @@ $(document).bind('mobileinit', function() {
 		return result;
 	}
 	
+	var ReloadAccount = function( responseData) {
+		/*
+		 * Reload the data
+		 * 
+		 * A kids data could have changed since the POST was initiated.
+		 * The data will have changed if the corresponding kid object has
+		 * an oldName or a nonzero newPoints member.
+		 * 
+		 * Go through each legacy kid object. If that legacy kid object has
+		 * changed, reflect those same changes in the fetched kid object. Then
+		 * use the fetched (possibly updated) kid objects as the current kids.
+		 * 
+		 */
+
+		// add any changed kid data
+		currentAcct = getAccountData();
+		var ck = getKidData();
+		$.each( currentAcct.kids, function(i,k) {
+			$.each( responseData.kids, function (j,fk) {
+				if(	k.key == fk.key					// k.key could be null, fk.key cannot be null
+					|| (k.oldName == fk.kidName)	// k.oldName could be null, fk.kidName cannot
+					|| (k.kidName == fk.kidName))	// neither can be null
+					{
+						// fk is the matching fetched kid for k
+						if( k.oldName || k.newPoints) {
+							// the legacy kid object has changed, edit the newly fetched kid
+							if( k.oldName) setKidName( fk, k.kidName);
+							fk.newPoints = k.newPoints;
+
+							queueAccountPost();
+					}
+
+					// make sure to set the currently selected kid to the (possibly updated) fetched kid
+					if( ck == k) setKidData(fk);
+								
+					return false;	// stop inner loop, we're done
+				}
+
+				return true;	// keep going
+			});
+
+			return true;	// keep going for every kid
+		});
+	}
+	
+	var ReloadKid = function( rd) {
+		/*
+		 * Reload the data
+		 * 
+		 * A kids data could have changed since the POST was initiated.
+		 * The data will have changed if the corresponding kid object has
+		 * an oldName or a nonzero newPoints member.
+		 * 
+		 * Go through each legacy kid object. If that legacy kid object has
+		 * changed, reflect those same changes in the fetched kid object. Then
+		 * use the fetched (possibly updated) kid objects as the current kids.
+		 * 
+		 */
+
+		// add any changed kid data
+		currentAcct = getAccountData();
+		$.each( currentAcct.kids, function(i,k) {
+			if(	k.key == rd.key					// k.key could be null, rd.key cannot be null
+				|| (k.oldName == rd.kidName)	// k.oldName could be null, rd.kidName cannot
+				|| (k.kidName == rd.kidName))	// neither can be null
+			{
+				// rd is the matching fetched kid for k
+				if( k.oldName || k.newPoints) {
+					// the legacy kid object has changed, edit the newly fetched kid
+					if( k.oldName)
+						setKidName( rd, k.kidName);
+					rd.newPoints = k.newPoints;
+
+					queueKidPost( rd);
+				}
+				
+				// load the events list
+				k.events = rd.events;
+				
+				refreshKidData(k);	// refresh the widgets if needed
+
+				return false;	// stop inner loop, we're done
+			}
+			
+			return true;	// keep going
+		});
+	}
+	
 	var postAccount = function( callback) {
 		// POST the account data now
 		var acctData = getAccountData();
 		var outData = { 'address':acctData.address,
 						'password':acctData.password,
-						'key':acctData.key,
 						'currentKid':currentKid.kidName,
 						'kids':[]
 					  }
@@ -159,7 +253,7 @@ $(document).bind('mobileinit', function() {
 				
 			// all events are considered new events with new points
 			if( k.newPoints)
-				kid.events = [{'points':k.newPoints}];
+				kid.events = {'points':k.newPoints};
 
 			outData.kids.push( kid);
 			
@@ -168,7 +262,8 @@ $(document).bind('mobileinit', function() {
 			delete k.oldName;
 		});
 
-		$.post( accountURL, JSON.stringify(outData),
+		var pURL = accountURL + '/' + acctData.key;
+		$.post( pURL, JSON.stringify(outData),
 			function(responseData,status,xhr) {
 				/*
 				 * All responses in JSON. Possible response objects include:
@@ -186,50 +281,7 @@ $(document).bind('mobileinit', function() {
 					$('#err_servermsg').text(responseData.errorMsg);
 					$.mobile.changePage( $('#errdialog'));
 				} else {
-					/*
-					 * Reload the data
-					 * 
-					 * A kids data could have changed since the POST was initiated.
-					 * The data will have changed if the corresponding kid object has
-					 * an oldName or a nonzero newPoints member.
-					 * 
-					 * Go through each legacy kid object. If that legacy kid object has
-					 * changed, reflect those same changes in the fetched kid object. Then
-					 * use the fetched (possibly updated) kid objects as the current kids.
-					 * 
-					 */
-
-					// add any changed kid data
-					currentAcct = getAccountData();
-					var ck = getKidData();
-					$.each( currentAcct.kids, function(i,k) {
-						$.each( responseData.kids, function (j,fk) {
-							if(	k.key == fk.key					// k.key could be null, fk.key cannot be null
-								|| (k.oldName == fk.kidName)	// k.oldName could be null, fk.kidName cannot
-								|| (k.kidName == fk.kidName))	// neither can be null
-							{
-								// fk is the matching fetched kid for k
-								if( k.oldName || k.newPoints) {
-									// the legacy kid object has changed, edit the newly fetched kid
-									if( k.oldName) setKidName( fk, k.kidName);
-									fk.newPoints = k.newPoints;
-
-									queuePost();
-								}
-
-								// make sure to set the currently selected kid to the (possibly updated) fetched kid
-								if( ck == k) setKidData(fk);
-								
-								return false;	// stop inner loop, we're done
-							}
-							
-							return true;	// keep going
-						});
-						
-						return true;	// keep going for every kid
-					});
-
-					// reset account data
+					ReloadAccount( responseData);
 					setAccountData( responseData);
 				}
 				
@@ -237,18 +289,62 @@ $(document).bind('mobileinit', function() {
 					callback();
 		});
 	}
+
+	var postKid = function( callback, kidData) {
+		// if kid has no key it hasn't yet been put into the online database.
+		// New kids are only postable as an account post, which should be handled
+		// by the postAccount's client code, not here
+		if( 'key' in kidData) {
+			var outData = { 'kidName':kidData.kidName,
+							'key':kidData.key
+						};
+			// do not store imageBlob, which is handled at portrait choice
+			// all events are considered new events with new points
+			if( kidData.newPoints)
+				outData.events = {'points':kidData.newPoints};
+
+			// clear out the semaphores indicating kid changes
+			kidData.newPoints = 0;
+			delete k.oldName;
+		}
+
+		var pURL = kidURL + '/' + kidData.key;
+		$.post( pURL, JSON.stringify(outData),
+			function(responseData,status,xhr) {
+				/*
+				 * All responses in JSON. Possible response objects include:
+				 * 
+				 * error object:
+				 * 		errorMsg: string to show
+				 * 
+				 * account object:
+				 * 		address: email address for account
+				 * 		password: password for account
+				 * 		kids: array of Kid objects
+				 */
+				if( "errorMsg" in responseData) {
+					$('#err_servermainmsg').text(responseData.errorCategory);
+					$('#err_servermsg').text(responseData.errorMsg);
+					$.mobile.changePage( $('#errdialog'));
+				} else 
+					ReloadKid( responseData);
+
+				if( callback)
+					callback();
+		});
+	}
 	
-	var postTimeout = 0;
+	var postAccountTimeout = 0;
 	var postAccountNow = function( callback) {
-		if( postTimeout != 0)
-			window.clearTimeout( postTimeout);
-		postTimeout = 0;
+		if( postAccountTimeout != 0)
+			window.clearTimeout( postAccountTimeout);
+		postAccountTimeout = 0;
 
 		postAccount( callback);
 	}
 	
 	var postAccountTriggered = function() {
-		postTimeout = 0;
+		postAccountTimeout = 0;
 		postAccount( null);
 	}
 	
@@ -259,18 +355,51 @@ $(document).bind('mobileinit', function() {
 	 * A good default to start with is 5 seconds of inactivity pushes a post.
 	 * 
 	 */
-	var queuePost = function() {
-		var queueInterval = 5000;	// wait 5 seconds between last activity and post
-		console.log( 'queuePost');
+	var queueAccountPost = function() {
+		console.log( 'queueAccountPost');
 
-		if( postTimeout != 0)
+		if( postAccountTimeout != 0)
 			// a timeout already exists.
-			window.clearTimeout( postTimeout);
+			window.clearTimeout( postAccountTimeout);
 			
 		// set the timeout
-		postTimeout = window.setTimeout(postAccountTriggered, queueInterval);
+		postAccountTimeout = window.setTimeout(postAccountTriggered, queueInterval);
 	}
 
+	
+	var postKidTimeout = 0;
+	var postKidNow = function( callback, kid) {
+		if( postKidTimeout != 0)
+			window.clearTimeout( postKidTimeout);
+		postKidTimeout = 0;
+
+		postKid( callback, kid);
+	}
+	
+	var postKidTriggered = function(kid) {
+		postKidTimeout = 0;
+		postKid( null, kid);
+	}
+	
+	var queueKidPost = function(kid) {
+		console.log( 'queueKidPost');
+
+		if( postKidTimeout != 0)
+			// a timeout already exists.
+			window.clearTimeout( postKidTimeout);
+			
+		// set the timeout
+		postKidTimeout = window.setTimeout( function() {postKidTriggered(kid);}, queueInterval);
+	}
+
+/*************************************************************************************
+ *
+ * LOGIN page
+ * 
+ * GET operation to see if credentials are proper. May auto-login by checking to see if
+ * credentials are stored in the localStorage of the browser.
+ * 
+ *************************************************************************************/
 
 	/*
 	 * Login page is showing.
@@ -327,7 +456,8 @@ $(document).bind('mobileinit', function() {
 					localStorage.setItem('pwd', response.password);
 					
 					setAccountData( response);
-					$.mobile.changePage( $('#homepage'));
+					
+					$.mobile.changePage( $('#homepage'), {transition:'slide'});
 				}
 			},
 			error: function(response, status, xhr, fe) {
@@ -344,6 +474,14 @@ $(document).bind('mobileinit', function() {
 		SubmitLoginForm(false);
 	});
 
+
+/*************************************************************************************
+ *
+ * CREATEACCOUNT page
+ * 
+ * POST operation. Check to make sure legal criteria are met and validate all input.
+ * 
+ *************************************************************************************/
 
 	var ValidateCreateAccountForm = function() {
 		// check email field
@@ -397,7 +535,7 @@ $(document).bind('mobileinit', function() {
 						localStorage.setItem('pwd', response.password);
 
 						setAccountData( response);
-						$.mobile.changePage( $('#homepage'));
+						$.mobile.changePage( $('#homepage'),{transition:'slide'});
 					}
 				},
 				error: function(response, status, xhr, fe) {
@@ -418,12 +556,17 @@ $(document).bind('mobileinit', function() {
 	});
 
 
-	/*
-	 *
-	 * HOMEPAGE page change handling
-	 * 
-	 */
-	$('#homepage').live('pagebeforeshow', function() {
+/*************************************************************************************
+ *
+ * HOME page
+ * 
+ * Data fetched at LOGIN or CREATEACCOUNT page. Occasional POST operations if the user
+ * inputs anything. GET operation for image, and pre-fetched GET for thumbnail on
+ * DETAILS page.
+ * 
+ *************************************************************************************/
+
+	$('#homepage').live('pageshow', function() {
 		createKidList();
 		if( getKidData() == null)
 			setDefaultKidData();
@@ -446,8 +589,8 @@ $(document).bind('mobileinit', function() {
 			 * 
 			 */
 			postAccountNow( function() {
-				setAccountData( null);
-				setKidData( null);
+				setAccountData( null);	// clear out the old data
+				setKidData( null);		// clear out the old data
 			});
 		}
 		
@@ -492,10 +635,10 @@ $(document).bind('mobileinit', function() {
 			$('#home_totalL').html( 0);
 		}
 	}
+
+
 	/*
-	 * 
 	 * HOMEPAGE widget handling
-	 * 
 	 */
 	$('#home_minusB').live('vclick', function( event, ui) {bonusBOnVclick( -1);});
 	$('#home_plusB').live('vclick', function( event, ui) {bonusBOnVclick( 1);});
@@ -506,7 +649,7 @@ $(document).bind('mobileinit', function() {
 		
 		$('#home_totalL').html( getKidTotal(kid));
 		
-		queuePost();
+		queueKidPost( kid);
 	}
 	
 	$('#home_childDDL').live('change', function( event, ui) {
@@ -526,11 +669,17 @@ $(document).bind('mobileinit', function() {
 	});
 
 	
-	/*
-	 * DETAILSPAGE initialization and widget events
-	 * 
-	 */
-	$('#detailspage').live('pagebeforeshow', function() {
+/*************************************************************************************
+ *
+ * DETAILS page
+ * 
+ * Data fetched at LOGIN or CREATEACCOUNT page. GET operation for thumbnail, possibly
+ * pre-fetch GET for HOME page's background image. Occasional POST operations to either
+ * the account object or the kid object if the user inputs anything.
+ * 
+ *************************************************************************************/
+
+	$('#detailspage').live('pageshow', function() {
 		setDetailsWidgets();
 	})
 	
@@ -579,13 +728,15 @@ $(document).bind('mobileinit', function() {
 
 				kid.newPoints = 0;	// reset the "new" kid to be a fresh kid
 				delete kid.key;
+
+				queueAccountPost();
 			} else {
 				setKidName( kid, newName);
 				setKidData( kid);	// refresh the kid data and page widgets
+				
+				queueKidPost( kid);
 			}
 
-			console.log( 'queueing post');
-			queuePost();
 		}
 	});
 	
@@ -665,10 +816,15 @@ $(document).bind('mobileinit', function() {
 	}
 	
 	
-	/*
-	 * BROWSEDIALOG initialization and widget events
-	 * 
-	 */
+/*************************************************************************************
+ *
+ * BROWSE page - WebApp Only Dialog
+ * 
+ * Load an image from the local disk and send it as the child's portrait. POST operation
+ * to blobstore. Data for blobstore URL fetched from thumbnail click.
+ * 
+ *************************************************************************************/
+
 	$('#browse_submit').live( 'click', function(e) {
 		var options = {
 			clearForm: true,
