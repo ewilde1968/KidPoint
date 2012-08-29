@@ -1,14 +1,31 @@
 $(document).bind('mobileinit', function() {
-	var localURL = 'http://localhost:8082/';
-	var remoteURL = 'http://kidspointsbeta.appspot.com/';
-	var rootURL = localURL;
+/*************************************************************************************
+ *
+ * Configuration Parameters
+ * 
+ * The constants that configure URLs, endpoints, POST delays, image resources and
+ * the 'new' kid workflow.
+ *  
+ *************************************************************************************/
+	Configuration();
 	var loginURL = rootURL + 'login';
-	var accountURL = rootURL + 'account';
 	var imagestoreURL = rootURL + 'imagestore';
 	var blobstoreURL = rootURL + 'blobstore';
-	var kidURL = rootURL + 'kid';
-	var queueInterval = 5000;	// wait 5 seconds between last activity and post
-	
+	var defaultThumbnail = 'stylesheets/images/camera.png';
+	var defaultPortrait = '';
+
+
+/*************************************************************************************
+ *
+ * Support for mobile devices
+ * 
+ * Determine if we're on a phone/tablet with a camera. Used to see if images should
+ * be pulled from a hard drive or a picture gallery.
+ * 
+ * Also make sure that cross domain access exists.
+ * 
+ *************************************************************************************/
+
 	var isPhone = function() {
 		return navigator && navigator.camera;
 	}
@@ -21,100 +38,45 @@ $(document).bind('mobileinit', function() {
 		$.mobile.pushState = false;
 	}
 
-	var accountData = null;
+
+/*************************************************************************************
+ *
+ * Two document variables that are critical are the current account and
+ * current kid. These are accessed from the Kid and Account class as well
+ * as the various js functions applied to the DOM directly (index.js).
+ * 
+ *************************************************************************************/
+
 	var setAccountData = function( acctData) {
-		accountData = acctData;
+		$('body').data('account', acctData);
 	}
 	
-	var getAccountData = function() {
-		return accountData;
-	}
-
-	var currentKid = null;
-	var refreshKidData = function(kid) {
-		if( currentKid == kid) {
-			// set all page widgets to reflect new selected kid
-			if( $.mobile.activePage[0] == 'homepage')
-				setHomePageWidgets();
-			else if( $.mobile.activePage[0] == 'detailspage' )
-				setDetailsWidgets();
-		}
+	getAccountData = function() {
+		return $('body').data('account');
 	}
 
 	var setKidData = function( kid) {
-		currentKid = kid;
-		refreshKidData( kid);
+		$('body').data('currentKid',kid);
+		
+		// update the account so that the currently selected kid is stored
+		if( kid) {
+			getAccountData().changeCurrentKid(kid.kidName);
+			refreshPages();
+		}
 	}
 	
 	var getKidData = function() {
-		return currentKid;
+		return $('body').data('currentKid');
 	}
 	
-	var setKidName = function(kid,newName) {
-		kid.oldName = kid.kidName;	// oldName's existence is a semaphore for if a change has occurred
-		kid.kidName = newName;
-	}
-	
-	var addKidPoints = function(kid,val) {
-		if( !kid.newPoints)
-			kid.newPoints = 0;
-			
-		kid.newPoints += val;	// a nonzero newPoint's is a semaphore for if a change has occurred
-	}
-	
-	var unnamedKidName = "new";
-	var createKidList = function() {
-		var acctData = getAccountData();
-		
-		if( acctData) {
-			// populate the dropdown list
-			if( acctData.kids == null)
-				acctData.kids = [];
 
-			var items = [];
-			var foundUnnamed = false;
-			$.each(acctData.kids, function(i,k) {
-				if( k.kidName == unnamedKidName) {
-					foundUnnamed = true;
-					items.unshift( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
-				} else
-					items.push( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
-			});
-			
-			// add an "unnamed" new kid if one doesn't already exist
-			if( !foundUnnamed) {
-				items.unshift( '<option value="' + unnamedKidName + '">' + unnamedKidName + '</option>');
-				acctData.kids.unshift( {
-										"kidName":unnamedKidName,
-										"newPoints":0
-									});
-			}
 
-			// join and add the list to the select widget
-			itemData = items.join(' ');
-			$('#home_childDDL').html( itemData);
-		}
-	}
+/*************************************************************************************
+ *
+ * Common functions used on multiple mobile pages.
+ * 
+ *************************************************************************************/
 
-	var setDefaultKidData = function() {
-		// set default kid data
-		acctData = getAccountData();
-		
-		if( acctData.kids) {
-			var matchKidName = unnamedKidName;
-			if( acctData.currentKid)
-				matchKidName = acctData.currentKid;
-
-			$.each(acctData.kids, function(i,k) {
-				if( matchKidName == k.kidName)
-					setKidData( k);
-			});
-		}
-	}
-	
-	var defaultThumbnail = 'stylesheets/images/camera.png';
-	//var defaultPortrait = 'stylesheets/images/johnny_automatic_girl_and_boy.gif';
-	var defaultPortrait = '';
 	var getImageURL = function( kid, width, height, thumbnail) {
 		var url;
 		if( kid && kid.blobKey) {
@@ -128,268 +90,13 @@ $(document).bind('mobileinit', function() {
 
 		return url;
 	}
-	
-	/*
-	 * Get the total points
-	 * 
-	 * Input: kid object
-	 */
-	var getKidTotal = function( kid) {
-		var result = 0;
-		if( kid != null && kid.events != null) {
-			$.each(kid.events, function(i,e) {
-				result += e.points;
-			});
-		}
 
-		if( !kid.newPoints)
-			kid.newPoints = 0;
-		result += kid.newPoints;
-					
-		return result;
-	}
-	
-	var ReloadAccount = function( responseData) {
-		/*
-		 * Reload the data
-		 * 
-		 * A kids data could have changed since the POST was initiated.
-		 * The data will have changed if the corresponding kid object has
-		 * an oldName or a nonzero newPoints member.
-		 * 
-		 * Go through each legacy kid object. If that legacy kid object has
-		 * changed, reflect those same changes in the fetched kid object. Then
-		 * use the fetched (possibly updated) kid objects as the current kids.
-		 * 
-		 */
-
-		// add any changed kid data
-		currentAcct = getAccountData();
-		var ck = getKidData();
-		$.each( currentAcct.kids, function(i,k) {
-			$.each( responseData.kids, function (j,fk) {
-				if(	k.key == fk.key					// k.key could be null, fk.key cannot be null
-					|| (k.oldName == fk.kidName)	// k.oldName could be null, fk.kidName cannot
-					|| (k.kidName == fk.kidName))	// neither can be null
-					{
-						// fk is the matching fetched kid for k
-						if( k.oldName || k.newPoints) {
-							// the legacy kid object has changed, edit the newly fetched kid
-							if( k.oldName) setKidName( fk, k.kidName);
-							fk.newPoints = k.newPoints;
-
-							queueAccountPost();
-					}
-
-					// make sure to set the currently selected kid to the (possibly updated) fetched kid
-					if( ck == k) setKidData(fk);
-								
-					return false;	// stop inner loop, we're done
-				}
-
-				return true;	// keep going
-			});
-
-			return true;	// keep going for every kid
-		});
-	}
-	
-	var ReloadKid = function( rd) {
-		/*
-		 * Reload the data
-		 * 
-		 * A kids data could have changed since the POST was initiated.
-		 * The data will have changed if the corresponding kid object has
-		 * an oldName or a nonzero newPoints member.
-		 * 
-		 * Go through each legacy kid object. If that legacy kid object has
-		 * changed, reflect those same changes in the fetched kid object. Then
-		 * use the fetched (possibly updated) kid objects as the current kids.
-		 * 
-		 */
-
-		// add any changed kid data
-		currentAcct = getAccountData();
-		$.each( currentAcct.kids, function(i,k) {
-			if(	k.key == rd.key					// k.key could be null, rd.key cannot be null
-				|| (k.oldName == rd.kidName)	// k.oldName could be null, rd.kidName cannot
-				|| (k.kidName == rd.kidName))	// neither can be null
-			{
-				// rd is the matching fetched kid for k
-				if( k.oldName || k.newPoints) {
-					// the legacy kid object has changed, edit the newly fetched kid
-					if( k.oldName)
-						setKidName( rd, k.kidName);
-					rd.newPoints = k.newPoints;
-
-					queueKidPost( rd);
-				}
-				
-				// load the events list
-				k.events = rd.events;
-				
-				refreshKidData(k);	// refresh the widgets if needed
-
-				return false;	// stop inner loop, we're done
-			}
-			
-			return true;	// keep going
-		});
-	}
-	
-	var postAccount = function( callback) {
-		// POST the account data now
-		var acctData = getAccountData();
-		var outData = { 'address':acctData.address,
-						'password':acctData.password,
-						'currentKid':currentKid.kidName,
-						'kids':[]
-					  }
-			
-		$.each(acctData.kids, function(i,k) {
-			kid = { 'kidName':k.kidName,
-					'key':k.key
-				};
-				
-			// all events are considered new events with new points
-			if( k.newPoints)
-				kid.events = {'points':k.newPoints};
-
-			outData.kids.push( kid);
-			
-			// clear out the semaphores indicating kid changes
-			k.newPoints = 0;
-			delete k.oldName;
-		});
-
-		var pURL = accountURL + '/' + acctData.key;
-		$.post( pURL, JSON.stringify(outData),
-			function(responseData,status,xhr) {
-				/*
-				 * All responses in JSON. Possible response objects include:
-				 * 
-				 * error object:
-				 * 		errorMsg: string to show
-				 * 
-				 * account object:
-				 * 		address: email address for account
-				 * 		password: password for account
-				 * 		kids: array of Kid objects
-				 */
-				if( "errorMsg" in responseData) {
-					$('#err_servermainmsg').text(responseData.errorCategory);
-					$('#err_servermsg').text(responseData.errorMsg);
-					$.mobile.changePage( $('#errdialog'));
-				} else {
-					ReloadAccount( responseData);
-					setAccountData( responseData);
-				}
-				
-				if( callback)
-					callback();
-		});
-	}
-
-	var postKid = function( callback, kidData) {
-		// if kid has no key it hasn't yet been put into the online database.
-		// New kids are only postable as an account post, which should be handled
-		// by the postAccount's client code, not here
-		if( 'key' in kidData) {
-			var outData = { 'kidName':kidData.kidName,
-							'key':kidData.key
-						};
-			// do not store imageBlob, which is handled at portrait choice
-			// all events are considered new events with new points
-			if( kidData.newPoints)
-				outData.events = {'points':kidData.newPoints};
-
-			// clear out the semaphores indicating kid changes
-			kidData.newPoints = 0;
-			delete k.oldName;
-		}
-
-		var pURL = kidURL + '/' + kidData.key;
-		$.post( pURL, JSON.stringify(outData),
-			function(responseData,status,xhr) {
-				/*
-				 * All responses in JSON. Possible response objects include:
-				 * 
-				 * error object:
-				 * 		errorMsg: string to show
-				 * 
-				 * account object:
-				 * 		address: email address for account
-				 * 		password: password for account
-				 * 		kids: array of Kid objects
-				 */
-				if( "errorMsg" in responseData) {
-					$('#err_servermainmsg').text(responseData.errorCategory);
-					$('#err_servermsg').text(responseData.errorMsg);
-					$.mobile.changePage( $('#errdialog'));
-				} else 
-					ReloadKid( responseData);
-
-				if( callback)
-					callback();
-		});
-	}
-	
-	var postAccountTimeout = 0;
-	var postAccountNow = function( callback) {
-		if( postAccountTimeout != 0)
-			window.clearTimeout( postAccountTimeout);
-		postAccountTimeout = 0;
-
-		postAccount( callback);
-	}
-	
-	var postAccountTriggered = function() {
-		postAccountTimeout = 0;
-		postAccount( null);
-	}
-	
-	/*
-	 * Queue a POST of the account to the server.
-	 * 
-	 * Try to accumulate posts to the point where there is no more activity.
-	 * A good default to start with is 5 seconds of inactivity pushes a post.
-	 * 
-	 */
-	var queueAccountPost = function() {
-		console.log( 'queueAccountPost');
-
-		if( postAccountTimeout != 0)
-			// a timeout already exists.
-			window.clearTimeout( postAccountTimeout);
-			
-		// set the timeout
-		postAccountTimeout = window.setTimeout(postAccountTriggered, queueInterval);
-	}
-
-	
-	var postKidTimeout = 0;
-	var postKidNow = function( callback, kid) {
-		if( postKidTimeout != 0)
-			window.clearTimeout( postKidTimeout);
-		postKidTimeout = 0;
-
-		postKid( callback, kid);
-	}
-	
-	var postKidTriggered = function(kid) {
-		postKidTimeout = 0;
-		postKid( null, kid);
-	}
-	
-	var queueKidPost = function(kid) {
-		console.log( 'queueKidPost');
-
-		if( postKidTimeout != 0)
-			// a timeout already exists.
-			window.clearTimeout( postKidTimeout);
-			
-		// set the timeout
-		postKidTimeout = window.setTimeout( function() {postKidTriggered(kid);}, queueInterval);
+	refreshPages = function() {
+		// set all page widgets to reflect new selected kid
+		if( $.mobile.activePage.attr('id') == 'homepage')
+			setHomePageWidgets();
+		else if( $.mobile.activePage.attr('id') == 'detailspage' )
+			setDetailsWidgets();
 	}
 
 /*************************************************************************************
@@ -455,7 +162,7 @@ $(document).bind('mobileinit', function() {
 					localStorage.setItem('userID', response.address);
 					localStorage.setItem('pwd', response.password);
 					
-					setAccountData( response);
+					setAccountData( new Account(response));
 					
 					$.mobile.changePage( $('#homepage'), {transition:'slide'});
 				}
@@ -534,7 +241,7 @@ $(document).bind('mobileinit', function() {
 						localStorage.setItem('userID', response.address);
 						localStorage.setItem('pwd', response.password);
 
-						setAccountData( response);
+						setAccountData( new Account(response));
 						$.mobile.changePage( $('#homepage'),{transition:'slide'});
 					}
 				},
@@ -569,7 +276,7 @@ $(document).bind('mobileinit', function() {
 	$('#homepage').live('pageshow', function() {
 		createKidList();
 		if( getKidData() == null)
-			setDefaultKidData();
+			setKidData( getAccountData().getCurrentKid());
 			
 		// make sure height takes up full screen for background drawing
 		var winHeight = $(window).height();
@@ -588,7 +295,7 @@ $(document).bind('mobileinit', function() {
 			 * POST the data now.
 			 * 
 			 */
-			postAccountNow( function() {
+			getAccountData().postNow( function() {
 				setAccountData( null);	// clear out the old data
 				setKidData( null);		// clear out the old data
 			});
@@ -608,6 +315,25 @@ $(document).bind('mobileinit', function() {
 		}
 	});
 	
+	var createKidList = function() {
+		var acctData = getAccountData();
+		
+		if( acctData) {
+			// populate the dropdown list
+			var items = [];
+			$.each(acctData.kids, function(i,k) {
+				if( k.kidName == unnamedKidName) // unnamed kid goes first in list
+					items.unshift( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
+				else
+					items.push( '<option value="' + k.kidName + '">' + k.kidName + '</option>');
+			});
+			
+			// join and add the list to the select widget
+			itemData = items.join(' ');
+			$('#home_childDDL').html( itemData);
+		}
+	}
+
 	/*
 	 * Set the widget values of the home page to show the correct
 	 * Kid information.
@@ -626,7 +352,7 @@ $(document).bind('mobileinit', function() {
 			console.log('setHomePageWidgets, kid==' + kid.kidName)
 
 			$('#home_childDDL').val( kid.kidName).selectmenu('refresh');
-			$('#home_totalL').html( getKidTotal(kid));
+			$('#home_totalL').html( kid.totalPoints());
 		} else {
 			// clear widgets as we're clearing the kid data
 			console.log( 'clearing kid data');
@@ -645,11 +371,9 @@ $(document).bind('mobileinit', function() {
 
 	var bonusBOnVclick = function( valChange) {
 		var kid = getKidData();
-		addKidPoints( kid, valChange);
-		
-		$('#home_totalL').html( getKidTotal(kid));
-		
-		queueKidPost( kid);
+		kid.changePoints( valChange);
+
+		$('#home_totalL').html( kid.totalPoints());
 	}
 	
 	$('#home_childDDL').live('change', function( event, ui) {
@@ -680,6 +404,12 @@ $(document).bind('mobileinit', function() {
  *************************************************************************************/
 
 	$('#detailspage').live('pageshow', function() {
+		// make sure height takes up full screen for background drawing
+		var winHeight = $(window).height();
+		var contentHeight = $('#detailcontent').height();
+		if( contentHeight < winHeight)
+			$('#detailcontent').height( winHeight);
+
 		setDetailsWidgets();
 	})
 	
@@ -716,27 +446,21 @@ $(document).bind('mobileinit', function() {
 				 * 
 				 */
 				console.log( 'matched new name');
-				newKid = {
-							'kidName': newName,
-							'events': kid.events,
-							'newPoints': kid.newPoints,
-							'key': kid.key
-						};
+				newKid = new Kid({	'kidName': newName,
+									'events': kid.events,
+									'newPoints': kid.newPoints,
+									'key': kid.key
+								});
+
+				kid.newPoints = 0;	// reset the unnamed kid to be a fresh kid
+				kid.key = null;
 
 				acctData.kids.push( newKid);
 				setKidData( newKid);
-
-				kid.newPoints = 0;	// reset the "new" kid to be a fresh kid
-				delete kid.key;
-
-				queueAccountPost();
 			} else {
-				setKidName( kid, newName);
+				kid.changeName( newName);
 				setKidData( kid);	// refresh the kid data and page widgets
-				
-				queueKidPost( kid);
 			}
-
 		}
 	});
 	
@@ -761,7 +485,7 @@ $(document).bind('mobileinit', function() {
 						var options = new FileUploadOptions();
 						options.params = {
 							'account': getAccountData().address,
-							'kid': kid.key ? kid.key : kid.kidName
+							'kid': kid.key
 						};
 
 						var ft = new FileTransfer();
@@ -792,7 +516,7 @@ $(document).bind('mobileinit', function() {
 	$('#details_portraitImg').live('vclick', function( event, ui) {
 		// make sure the kid is saved
 		if( !getKidData().key)
-			postAccountNow( function() {GetPicture();});
+			getAccountData().postNow( function() {GetPicture();});
 		else
 			GetPicture();
 	});
@@ -803,7 +527,7 @@ $(document).bind('mobileinit', function() {
 		var url = getImageURL(kid, 80, 120, true);
 		if( kid) {
 			$('#details_name').val( kid.kidName);
-			$('#details_totalL').html( getKidTotal(kid));
+			$('#details_totalL').html( kid.totalPoints());
 		
 			if( kid.blobKey)
 				$('#details_portraitImg').prop('src', url);
