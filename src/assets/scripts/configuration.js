@@ -11,9 +11,7 @@
  *  
  *************************************************************************************/
 Configuration = function() {
-	localURL = 'http://localhost:8082/';
-	remoteURL = 'http://kidspointsbeta.appspot.com/';
-	rootURL = localURL;
+	rootURL = 'http://localhost:8082/';
 	unnamedKidName = "new";
 	queueInterval = 5000;	// wait 5 seconds between last activity and post
 }

@@ -435,32 +435,17 @@ $(document).bind('mobileinit', function() {
 			if( goHome) return;
 
 			if( kid.kidName == unnamedKidName) {
-				/*
-				 * Changed name from "new" kid to something else
-				 * 
-				 * Create a new kid object and append it to the account's
-				 * array of kids. The current kid becomes this new kid
-				 * object.
-				 * 
-				 * The "new" kid object needs to be reset, too.
-				 * 
-				 */
+				// Changed name from "new" kid to something else
 				console.log( 'matched new name');
-				newKid = new Kid({	'kidName': newName,
-									'events': kid.events,
-									'newPoints': kid.newPoints,
-									'key': kid.key
-								});
+				kid.changeName(newName);
 
-				kid.newPoints = 0;	// reset the unnamed kid to be a fresh kid
-				kid.key = null;
+				// Create a new unnamed kid and add it to the beginning of the kids array
+				newKid = new Kid({'kidName':unnamedKidName});
+				acctData.kids.unshift(newKid);
 
-				acctData.kids.push( newKid);
-				setKidData( newKid);
-			} else {
+				acctData.queuePost();	// save the account
+			} else
 				kid.changeName( newName);
-				setKidData( kid);	// refresh the kid data and page widgets
-			}
 		}
 	});
 	
@@ -529,7 +514,7 @@ $(document).bind('mobileinit', function() {
 			$('#details_name').val( kid.kidName);
 			$('#details_totalL').html( kid.totalPoints());
 		
-			if( kid.blobKey)
+			if( url.length > 0)
 				$('#details_portraitImg').prop('src', url);
 		} else {
 			// clear the data
