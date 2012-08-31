@@ -148,6 +148,14 @@ $(document).bind('mobileinit', function() {
  * 
  *************************************************************************************/
 
+	$('#createaccountpage').live('pageshow', function() {
+		// make sure height takes up full screen for background drawing
+		var winHeight = $(window).height();
+		var contentHeight = $('#createaccountcontent').height();
+		if( contentHeight < winHeight)
+			$('#createaccountcontent').height( winHeight);
+	});
+
 	var ValidateCreateAccountForm = function() {
 		// check email field
 		var addr = $('#create_addr').val();

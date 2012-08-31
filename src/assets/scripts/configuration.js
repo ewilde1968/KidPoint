@@ -28,7 +28,17 @@ else if( ENVIRONMENT_CONSTANT == "device")
 		url: "phonegap.js",
 		data: null,
 		dataType: 'script',
-		success: function() {rootURL = 'http://kidspointsbeta.appspot.com/';}
+		success: function() {
+			rootURL = 'http://kidspointsbeta.appspot.com/';
+
+			// setup for Phone Gap access cross domain
+			if( $.support)
+				$.support.cors = true;
+			if( $.mobile) {
+				$.mobile.allowCrossDomainPages = true;
+				$.mobile.pushState = false;
+			}
+		}
 	});
 loginURL = rootURL + 'login';
 accountURL = rootURL + 'account';
@@ -63,12 +73,4 @@ defaultThumbnail = 'stylesheets/images/camera.png';
 
 var isPhone = function() {
 	return navigator && navigator.camera;
-}
-
-// setup for Phone Gap access cross domain
-if( $.support)
-	$.support.cors = true;
-if( $.mobile) {
-	$.mobile.allowCrossDomainPages = true;
-	$.mobile.pushState = false;
 }
