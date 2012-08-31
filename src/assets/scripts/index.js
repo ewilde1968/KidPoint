@@ -1,46 +1,6 @@
 $(document).bind('mobileinit', function() {
 /*************************************************************************************
  *
- * Configuration Parameters
- * 
- * The constants that configure URLs, endpoints, POST delays, image resources and
- * the 'new' kid workflow.
- *  
- *************************************************************************************/
-	Configuration();
-	var loginURL = rootURL + 'login';
-	var imagestoreURL = rootURL + 'imagestore';
-	var blobstoreURL = rootURL + 'blobstore';
-	var defaultThumbnail = 'stylesheets/images/camera.png';
-	var defaultPortrait = '';
-
-
-/*************************************************************************************
- *
- * Support for mobile devices
- * 
- * Determine if we're on a phone/tablet with a camera. Used to see if images should
- * be pulled from a hard drive or a picture gallery.
- * 
- * Also make sure that cross domain access exists.
- * 
- *************************************************************************************/
-
-	var isPhone = function() {
-		return navigator && navigator.camera;
-	}
-	
-	// setup for Phone Gap access cross domain
-	if( $.support)
-		$.support.cors = true;
-	if( $.mobile) {
-		$.mobile.allowCrossDomainPages = true;
-		$.mobile.pushState = false;
-	}
-
-
-/*************************************************************************************
- *
  * Two document variables that are critical are the current account and
  * current kid. These are accessed from the Kid and Account class as well
  * as the various js functions applied to the DOM directly (index.js).
@@ -68,7 +28,6 @@ $(document).bind('mobileinit', function() {
 	var getKidData = function() {
 		return $('body').data('currentKid');
 	}
-	
 
 
 /*************************************************************************************
@@ -76,7 +35,6 @@ $(document).bind('mobileinit', function() {
  * Common functions used on multiple mobile pages.
  * 
  *************************************************************************************/
-
 	var getImageURL = function( kid, width, height, thumbnail) {
 		var url;
 		if( kid && kid.blobKey) {

@@ -1,17 +1,74 @@
 /*************************************************************************************
  *
+ * ENVIRONMENT_CONSTANT
+ * 
+ * The constants that determines whether this is a devserver, browser app or mobile app
+ * 
+ *************************************************************************************/
+ENVIRONMENT_CONSTANT = "devserver"
+ENVIRONMENT_CONSTANT = "browser"
+/*ENVIRONMENT_CONSTANT = "device"
+
+
+/*************************************************************************************
+ *
  * Configuration Parameters
  * 
- * The constants that configure URLs, endpoints, POST delays, image resources and
- * the 'new' kid workflow.
+ * The constants that configure endpoints
  * 
- * The endpoint configuration data should be pulled into another file or perhaps
- * index.html in order to simplify the build system for Phone Gap Build vs. webapp
- * target environments.
- *  
  *************************************************************************************/
-Configuration = function() {
+if( ENVIRONMENT_CONSTANT == "devserver")
 	rootURL = 'http://localhost:8082/';
-	unnamedKidName = "new";
-	queueInterval = 5000;	// wait 5 seconds between last activity and post
+else if( ENVIRONMENT_CONSTANT == "browser")
+	rootURL = 'http://kidspointsbeta.appspot.com/';
+else if( ENVIRONMENT_CONSTANT == "device")
+	jQuery.ajax({
+		async: false,
+		type: "GET",
+		url: "phonegap.js",
+		data: null,
+		dataType: 'script',
+		success: function() {rootURL = 'http://kidspointsbeta.appspot.com/';}
+	});
+loginURL = rootURL + 'login';
+accountURL = rootURL + 'account';
+kidURL = rootURL + 'kid';
+imagestoreURL = rootURL + 'imagestore';
+blobstoreURL = rootURL + 'blobstore';
+
+
+/*************************************************************************************
+ *
+ * Configuration Parameters
+ * 
+ * The constants that configure POST delays, image resources and the 'new' kid workflow.
+ * 
+ *************************************************************************************/
+unnamedKidName = "new";
+queueInterval = 5000;	// wait 5 seconds between last activity and post
+defaultPortrait = '';
+defaultThumbnail = 'stylesheets/images/camera.png';
+
+
+/*************************************************************************************
+ *
+ * Support for mobile devices
+ * 
+ * Determine if we're on a phone/tablet with a camera. Used to see if images should
+ * be pulled from a hard drive or a picture gallery.
+ * 
+ * Also make sure that cross domain access exists.
+ * 
+ *************************************************************************************/
+
+var isPhone = function() {
+	return navigator && navigator.camera;
+}
+
+// setup for Phone Gap access cross domain
+if( $.support)
+	$.support.cors = true;
+if( $.mobile) {
+	$.mobile.allowCrossDomainPages = true;
+	$.mobile.pushState = false;
 }

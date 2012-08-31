@@ -10,9 +10,6 @@ Kid = function( jsonKid) {
 	return this;
 }
 
-Configuration();
-var kidURL = rootURL + 'kid';
-
 Kid.prototype.changePoints = function( points) {
 	if( points != 0) {
 		this.newPoints += points;

@@ -22,10 +22,6 @@ Account = function(jsonAccount) {
 	}
 }
 
-Configuration();
-var accountURL = rootURL + 'account';
-
-
 Account.prototype.changeAddress = function( newAddress) {
 	if( newAddress && newAddress != this.address) {
 		this.oldAddress = this.address;
