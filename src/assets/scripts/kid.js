@@ -101,7 +101,8 @@ Kid.prototype.postNow = function(callback) {
 				if( callback)
 					callback();
 		});
-	}
+	} else
+		getAccountData().postNow(); // the kid is not yet saved, which can only be done through an account POST
 }
 
 Kid.prototype.isMatch = function( jsonKid) {

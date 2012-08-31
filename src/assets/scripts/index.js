@@ -401,9 +401,10 @@ $(document).bind('mobileinit', function() {
 				newKid = new Kid({'kidName':unnamedKidName});
 				acctData.kids.unshift(newKid);
 
-				acctData.queuePost();	// save the account
-			} else
+				acctData.changeCurrentKid( newName);
+			} else {
 				kid.changeName( newName);
+			}
 		}
 	});
 	

@@ -6,7 +6,7 @@
  * 
  *************************************************************************************/
 ENVIRONMENT_CONSTANT = "devserver"
-ENVIRONMENT_CONSTANT = "browser"
+/*ENVIRONMENT_CONSTANT = "browser"
 /*ENVIRONMENT_CONSTANT = "device"
 
 
