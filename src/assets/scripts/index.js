@@ -325,6 +325,10 @@ $(document).bind('mobileinit', function() {
 
 		var url = getImageURL(kid, $('#homecontent').width(), $('#homecontent').height(), false);
 		console.log( 'load image from:' + url);
+		if( url.length < 1)
+			$('#home_portraitImg').css('visibility','hidden');
+		else
+			$('#home_portraitImg').css('visibility','visible');
 		$('#home_portraitImg').prop('src', url);
 
 		if( kid) {
