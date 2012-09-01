@@ -6,7 +6,7 @@
  * 
  *************************************************************************************/
 ENVIRONMENT_CONSTANT = "devserver"
-/*ENVIRONMENT_CONSTANT = "browser"
+ENVIRONMENT_CONSTANT = "browser"
 /*ENVIRONMENT_CONSTANT = "device"
 
 
@@ -55,7 +55,7 @@ blobstoreURL = rootURL + 'blobstore';
  * 
  *************************************************************************************/
 unnamedKidName = "new";
-queueInterval = 5000;	// wait 5 seconds between last activity and post
+queueInterval = 3000;	// wait 3 seconds between last activity and post
 defaultPortrait = '';
 defaultThumbnail = 'stylesheets/images/camera.png';
 

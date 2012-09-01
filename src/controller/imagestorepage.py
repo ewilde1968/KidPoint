@@ -24,6 +24,7 @@ class ImageStorePage(webapp2.RequestHandler):
     '''
     def get(self):
         try:
+            logging.debug( 'ImageStoreUpload:GET')
             blobKey = self.request.get('blobKey')
 
             if not blobKey:
@@ -33,20 +34,22 @@ class ImageStorePage(webapp2.RequestHandler):
 
             widthInfo = self.request.get('width')
             if not widthInfo:
-                width = 320
+                w = 320
             else:
-                width = int( widthInfo)
-                    
+                w = int( widthInfo)
+            
             heightInfo = self.request.get('height')
             if not heightInfo:
-                height = 480
+                h = 480
             else:
-                height = int( heightInfo)
-                
-            img.resize(width, height)
+                h = int( heightInfo)
+                  
+            # image resize is not choosing the size that is the smallest in the bounding box
+            # resize to height or width alone, whichever is smaller
+            img.resize(w,h,True)
             img.im_feeling_lucky()
             outImg = img.execute_transforms(output_encoding=images.JPEG)
-                
+
             self.response.headers['Content-Type'] = "image/jpeg"
             self.response.out.write( outImg)
 

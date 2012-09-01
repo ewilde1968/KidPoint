@@ -15,6 +15,10 @@ th {
 	color:#734949;
 }
 
+.invalidtext {
+	box-shadow:0em 0em 0.3em 0.3em #734949;
+}
+
 .login_hidden {
 	visibility:hidden;
 }

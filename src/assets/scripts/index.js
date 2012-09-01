@@ -161,23 +161,35 @@ $(document).bind('mobileinit', function() {
 		var addr = $('#create_addr').val();
 		var atpos = addr.indexOf('@');
 		var dotpos = addr.lastIndexOf('.');
-		if( !addr || addr.length > 1024 || addr.length < 5 || atpos < 1 || dotpos < atpos+2 || dotpos+2 >= addr.length)
+		if( !addr || addr.length > 1024 || addr.length < 5 || atpos < 1 || dotpos < atpos+2 || dotpos+2 >= addr.length) {
+			$('#create_addr').addClass('invalidtext');
 			return 'Invalid email address';
+		}
+		$('#create_addr').removeClass('invalidtext');
 
 		// check password field
 		var pwd = $('#create_password').val();
-		if( !pwd || pwd.length > 1024 || pwd.indexOf('/') != -1 || pwd.indexOf('?') != -1)
+		if( !pwd || pwd.length > 1024 || pwd.indexOf('/') != -1 || pwd.indexOf('?') != -1) {
+			$('#create_password').addClass('invalidtext');
 			return 'Invalid password. Password cannot contain "/" or "?".';
+		}
+		$('#create_password').removeClass('invalidtext');
 
 		// check password confirmation field
 		var confirm = $('#create_confirm').val();
-		if( pwd != confirm)
+		if( pwd != confirm) {
+			$('#create_confirm').addClass('invalidtext');
 			return 'Invalid password confirmation';
+		}
+		$('#create_confirm').removeClass('invalidtext');
 
 		// check Terms of Use checkbox
 		var tou = $('#create_checkbox').is(':checked');
-		if( !tou)
+		if( !tou) {
+			$('#create_checkbox').addClass('invalidtext');
 			return 'You must accept the Terms of Use';
+		}
+		$('#create_checkbox').removeClass('invalidtext');
 
 		return 'success';
 	}
@@ -312,6 +324,7 @@ $(document).bind('mobileinit', function() {
 		kid = getKidData();
 
 		var url = getImageURL(kid, $('#homecontent').width(), $('#homecontent').height(), false);
+		console.log( 'load image from:' + url);
 		$('#home_portraitImg').prop('src', url);
 
 		if( kid) {
