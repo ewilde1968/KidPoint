@@ -429,6 +429,7 @@ $(document).bind('mobileinit', function() {
 				acctData.changeCurrentKid( newName);
 			} else {
 				kid.changeName( newName);
+				acctData.changeCurrentKid( newName);
 			}
 		}
 	});
