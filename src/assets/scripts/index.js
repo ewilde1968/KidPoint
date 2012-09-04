@@ -29,6 +29,12 @@ $(document).bind('mobileinit', function() {
 		return $('body').data('currentKid');
 	}
 
+	window.onbeforeunload = function() {
+		/*
+		 * Closing down the application. POST the data now.
+		 */
+		getAccountData().postNow();
+	}
 
 /*************************************************************************************
  *
@@ -252,23 +258,23 @@ $(document).bind('mobileinit', function() {
  *************************************************************************************/
 
 	$('#homepage').live('pageshow', function() {
-		createKidList();
-		if( getKidData() == null)
-			setKidData( getAccountData().getCurrentKid());
-			
 		// make sure height takes up full screen for background drawing
 		var winHeight = $(window).height();
 		var contentHeight = $('#homecontent').height();
 		if( contentHeight < winHeight)
 			$('#homecontent').height( winHeight);
 
-		setHomePageWidgets();
+		createKidList();
+		if( getKidData() == null)
+			setKidData( getAccountData().getCurrentKid());
+		else
+			setHomePageWidgets();
 	});
-	
+
 	$('#homepage').live('pagehide', function(event,ui) {
 		if( ui.nextPage[0].id != 'detailspage') {
 			/*
-			 * Logging out or closing down the application
+			 * Logging out
 			 * 
 			 * POST the data now.
 			 * 
@@ -313,6 +319,27 @@ $(document).bind('mobileinit', function() {
 	}
 
 	/*
+	 * Set the child's portrait
+	 * 
+	 * A background image with a URL or 'none'. Keep track of the last
+	 * background url so that we know whether or not to reload.
+	 */
+	var lastURL = '';
+	var setHomePortrait = function(kid) {
+		var url = getImageURL(kid, $('#homecontent').width(), $('#homecontent').height(), false);
+		console.log( 'load image from:' + url);
+
+		if( lastURL != url) {
+			if( url.length < 1)
+				$('#homecontent').css('background-image', 'none');
+			else
+				$('#homecontent').css('background-image', 'url("' + url + '")');
+
+			lastURL = url;
+		}
+	}
+	
+	/*
 	 * Set the widget values of the home page to show the correct
 	 * Kid information.
 	 *
@@ -323,13 +350,7 @@ $(document).bind('mobileinit', function() {
 	var setHomePageWidgets = function() {
 		kid = getKidData();
 
-		var url = getImageURL(kid, $('#homecontent').width(), $('#homecontent').height(), false);
-		console.log( 'load image from:' + url);
-		if( url.length < 1)
-			$('#home_portraitImg').css('visibility','hidden');
-		else
-			$('#home_portraitImg').css('visibility','visible');
-		$('#home_portraitImg').prop('src', url);
+		setHomePortrait(kid);
 
 		if( kid) {
 			console.log('setHomePageWidgets, kid==' + kid.kidName)
