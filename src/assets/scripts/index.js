@@ -57,12 +57,21 @@ $(document).bind('mobileinit', function() {
 			setDetailsWidgets();
 	}
 
-	window.onbeforeunload = function() {
+	$(window).bind('orientationchange resize', function() {
+		if( !isPhone())
+			return;
+
+		if( $.mobile.activePage.attr('id') == 'homepage') {
+			setHomePortrait( getKidData());
+		}
+	});
+
+	$(window).bind('onbeforeunload', function() {
 		/*
 		 * Closing down the application. POST the data now.
 		 */
 		getAccountData().postNow();
-	}
+	});
 	
 	/*
 	 * JQuery Ghost Tap
@@ -352,10 +361,6 @@ $(document).bind('mobileinit', function() {
 		}
 	}
 	
-	$('#homepage').live('orientationchange', function(e) {
-		setHomePortrait( getKidData(), e.orientation);
-	});
-	
 	/*
 	 * Set the widget values of the home page to show the correct
 	 * Kid information.
@@ -367,7 +372,7 @@ $(document).bind('mobileinit', function() {
 	var setHomePageWidgets = function() {
 		kid = getKidData();
 
-		setHomePortrait(kid, window.orientation);
+		setHomePortrait(kid);
 
 		if( kid) {
 			console.log('setHomePageWidgets, kid==' + kid.kidName)
