@@ -13,12 +13,17 @@ body {
 	box-shadow:0em 0em 0.3em 0.3em #734949;
 }
 
+.homeportrait {
+	overflow:hidden;
+	position:fixed; top:0px; right:0px;
+}
+
 #home_detailsB {
 	position:absolute; right:10px;
 }
 
 .home_bottomrow {
-	position:absolute; bottom:10px;
+	position:absolute; bottom:15px;
 	width:100%;
 }
 
@@ -36,8 +41,14 @@ body {
 	position:relative; top:5px;
 }
 
-#details_portraitImg {
+.details_portraitrow {
 	position:relative; top:10px;
+	height:120px;
+	width:100%;
+}
+
+#details_portraitImg {
+	position:absolute; left:0px;
 	width:80px;
 	height:120px;
 }
@@ -45,14 +56,4 @@ body {
 #details_totalL {
 	position:absolute; right:5px;
 	font-size: 5em;
-}
-
-#details_weekImg {
-	position:relative; top:15px;
-	width:100%;
-	height:40%;
-}
-
-#details_goalB {
-	position:relative; top:10px; left:35%;
 }

@@ -63,7 +63,29 @@ $(document).bind('mobileinit', function() {
 		 */
 		getAccountData().postNow();
 	}
+	
+	/*
+	 * JQuery Ghost Tap
+	 * 
+	 * Check to see if this event is a ghost tap, a common problem with JQuery that has
+	 * no satisfying fix. See http://forum.jquery.com/topic/tap-fires-twice-with-live-tap
+	 * 
+	 */
+	var lastclickpoint, curclickpoint;
+	var isJQMGhostTap = function(event){
+		if( !isPhone())
+			return false;
 
+		curclickpoint = event.clientX+'x'+event.clientY;
+		if (lastclickpoint === curclickpoint) {
+			lastclickpoint = '';
+			return true;
+		} else {
+			//alert(lastclickpoint);
+			lastclickpoint = curclickpoint;
+			return false;
+		}
+	}
 
 /*************************************************************************************
  *
@@ -89,13 +111,6 @@ $(document).bind('mobileinit', function() {
 		$('#login_addr').val( userID ? userID : '');
 		$('#login_pwd').val( password ? password : '');
 		$('#login_errtext').css('visibility','hidden');
-		
-		// make sure height takes up full screen for background drawing
-		var winHeight = $(window).height();
-		var headerHeight = $('#loginheader').height();
-		var contentHeight = $('#logincontent').height();
-		if( contentHeight < (winHeight - headerHeight))
-			$('#logincontent').height( winHeight - headerHeight);
 
 		if( userID && password)
 			SubmitLoginForm( true)
@@ -155,14 +170,6 @@ $(document).bind('mobileinit', function() {
  * POST operation. Check to make sure legal criteria are met and validate all input.
  * 
  *************************************************************************************/
-
-	$('#createaccountpage').live('pageshow', function() {
-		// make sure height takes up full screen for background drawing
-		var winHeight = $(window).height();
-		var contentHeight = $('#createaccountcontent').height();
-		if( contentHeight < winHeight)
-			$('#createaccountcontent').height( winHeight);
-	});
 
 	var ValidateCreateAccountForm = function() {
 		// check email field
@@ -260,12 +267,6 @@ $(document).bind('mobileinit', function() {
  *************************************************************************************/
 
 	$('#homepage').live('pageshow', function() {
-		// make sure height takes up full screen for background drawing
-		var winHeight = $(window).height();
-		var contentHeight = $('#homecontent').height();
-		if( contentHeight < winHeight)
-			$('#homecontent').height( winHeight);
-
 		createKidList();
 		if( getKidData() == null)
 			setKidData( getAccountData().getCurrentKid());
@@ -327,8 +328,8 @@ $(document).bind('mobileinit', function() {
 	/*
 	 * Set the child's portrait
 	 * 
-	 * A background image with a URL or 'none'. Keep track of the last
-	 * background url so that we know whether or not to reload.
+	 * An image with a URL (blobKey or static). Keep track of the last
+	 * url used so that we know whether or not to reload.
 	 * 
 	 * width and height are not always accurate after the orientationchange
 	 * event. If bugs appear on orientationchange in showing the portrait,
@@ -337,23 +338,22 @@ $(document).bind('mobileinit', function() {
 	 */
 	var lastURL = '';
 	var setHomePortrait = function(kid) {
-		var w = $(window).width();
-		var h = $(window).height();
+		var w = $(window).innerWidth();
+		var h = $(window).innerHeight();
+
 		var url = getImageURL(kid, w, h, false);
 		console.log( 'load image from:' + url);
 
 		if( lastURL != url) {
-			if( url.length < 1)
-				$('#homecontent').css('background-image', 'none');
-			else
-				$('#homecontent').css('background-image', 'url("' + url + '")');
+			var newImg = $('<img src="' + url + '" class="homeportrait" />');
+			$('.homeportrait').replaceWith( newImg);
 
 			lastURL = url;
 		}
 	}
 	
 	$('#homepage').live('orientationchange', function(e) {
-		setHomePortrait( getKidData());
+		setHomePortrait( getKidData(), e.orientation);
 	});
 	
 	/*
@@ -367,7 +367,7 @@ $(document).bind('mobileinit', function() {
 	var setHomePageWidgets = function() {
 		kid = getKidData();
 
-		setHomePortrait(kid);
+		setHomePortrait(kid, window.orientation);
 
 		if( kid) {
 			console.log('setHomePageWidgets, kid==' + kid.kidName)
@@ -387,8 +387,8 @@ $(document).bind('mobileinit', function() {
 	/*
 	 * HOMEPAGE widget handling
 	 */
-	$('#home_minusB').live('tap', function( event, ui) {bonusBOnTap( -1);});
-	$('#home_plusB').live('tap', function( event, ui) {bonusBOnTap( 1);});
+	$('#home_minusB').live('tap', function( event, ui) {if( !isJQMGhostTap(event)) bonusBOnTap( -1);});
+	$('#home_plusB').live('tap', function( event, ui) {if( !isJQMGhostTap(event)) bonusBOnTap( 1);});
 
 	var bonusBOnTap = function( valChange) {
 		var kid = getKidData();
@@ -425,12 +425,6 @@ $(document).bind('mobileinit', function() {
  *************************************************************************************/
 
 	$('#detailspage').live('pageshow', function() {
-		// make sure height takes up full screen for background drawing
-		var winHeight = $(window).height();
-		var contentHeight = $('#detailcontent').height();
-		if( contentHeight < winHeight)
-			$('#detailcontent').height( winHeight);
-
 		setDetailsWidgets();
 	})
 

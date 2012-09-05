@@ -10,8 +10,7 @@
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"> 
 
-	<link rel="stylesheet" href="stylesheets/KidsPointsBeta.min.css" />
-	<link rel="stylesheet" href="stylesheets/jquery.mobile.structure-1.1.1.min.css" />
+	<link rel="stylesheet" href="stylesheets/jquery.mobile-1.1.1.min.css" />
 	<link rel="stylesheet" href="stylesheets/main.css" />
 	<script src="scripts/jquery-1.7.2.min.js"></script>
 	<script src="scripts/configuration.js"></script>
@@ -110,6 +109,7 @@
 <div data-role="page" id="homepage">
 
 	<div data-role="content" data-theme="a" id="homecontent">
+		<img src="" class="homeportrait" />
 		<div class="ui-grid-c">
 			<a href="#loginpage" class="ui-block-a" data-role="button" data-mini="true">logout</a>
 		</div>
@@ -139,14 +139,16 @@
 
 	<div data-role="content" data-theme="a" id="detailcontent">
 		<div class="ui-grid-b">
-			<a href="#homepage" data-rel="back" data-role="button" data-icon="home" data-mini="true" data-inline="true">home</a>
+			<a href="#homepage" class="ui-block-a" data-rel="back" data-role="button" data-icon="home" data-mini="true" data-inline="true">home</a>
 		</div>
 		<div data-role="fieldcontain" id="details_nameFC">
 			<label for="details_name">child's name:</label>
 			<input type="email" id="details_name" name="details_name" data-mini="true" />
 		</div>
-		<img src="stylesheets/images/camera.png" id="details_portraitImg" alt="tap" />
-		<label id="details_totalL" class="details_totalL">00</label>
+		<div class="details_portraitrow">
+			<img src="stylesheets/images/camera.png" id="details_portraitImg" alt="tap" />
+			<label id="details_totalL" class="details_totalL">00</label>
+		</div>
 	</div><!-- /content -->
 
 </div><!-- /page -->
