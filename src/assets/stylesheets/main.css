@@ -1,14 +1,8 @@
 @charset "utf-8";
 body {
 	font-family: Arial, Helvetica, sans-serif;
-}
-
-td {
-	font-family: Arial, Helvetica, sans-serif;
-}
-
-th {
-	font-family: Arial, Helvetica, sans-serif;
+	background-repeat: no-repeat;
+	text-align:center;
 }
 
 .errtext {
@@ -17,10 +11,6 @@ th {
 
 .invalidtext {
 	box-shadow:0em 0em 0.3em 0.3em #734949;
-}
-
-#homepage {
-	text-align:center;
 }
 
 #home_detailsB {
@@ -65,8 +55,4 @@ th {
 
 #details_goalB {
 	position:relative; top:10px; left:35%;
-}
-
-.nodisplay {
-	display:none;
 }

@@ -29,12 +29,6 @@ $(document).bind('mobileinit', function() {
 		return $('body').data('currentKid');
 	}
 
-	window.onbeforeunload = function() {
-		/*
-		 * Closing down the application. POST the data now.
-		 */
-		getAccountData().postNow();
-	}
 
 /*************************************************************************************
  *
@@ -62,6 +56,14 @@ $(document).bind('mobileinit', function() {
 		else if( $.mobile.activePage.attr('id') == 'detailspage' )
 			setDetailsWidgets();
 	}
+
+	window.onbeforeunload = function() {
+		/*
+		 * Closing down the application. POST the data now.
+		 */
+		getAccountData().postNow();
+	}
+
 
 /*************************************************************************************
  *
@@ -298,7 +300,11 @@ $(document).bind('mobileinit', function() {
 			setKidData(null);
 		}
 	});
-	
+
+	$('#homepage').live('swipeleft', function() {
+		$.mobile.changePage( $('#detailspage'));
+	});
+
 	var createKidList = function() {
 		var acctData = getAccountData();
 		
@@ -323,10 +329,17 @@ $(document).bind('mobileinit', function() {
 	 * 
 	 * A background image with a URL or 'none'. Keep track of the last
 	 * background url so that we know whether or not to reload.
+	 * 
+	 * width and height are not always accurate after the orientationchange
+	 * event. If bugs appear on orientationchange in showing the portrait,
+	 * revisit this section to get the portrait layout correct.
+	 * 
 	 */
 	var lastURL = '';
 	var setHomePortrait = function(kid) {
-		var url = getImageURL(kid, $('#homecontent').width(), $('#homecontent').height(), false);
+		var w = $(window).width();
+		var h = $(window).height();
+		var url = getImageURL(kid, w, h, false);
 		console.log( 'load image from:' + url);
 
 		if( lastURL != url) {
@@ -338,6 +351,10 @@ $(document).bind('mobileinit', function() {
 			lastURL = url;
 		}
 	}
+	
+	$('#homepage').live('orientationchange', function(e) {
+		setHomePortrait( getKidData());
+	});
 	
 	/*
 	 * Set the widget values of the home page to show the correct
@@ -370,10 +387,10 @@ $(document).bind('mobileinit', function() {
 	/*
 	 * HOMEPAGE widget handling
 	 */
-	$('#home_minusB').live('vclick', function( event, ui) {bonusBOnVclick( -1);});
-	$('#home_plusB').live('vclick', function( event, ui) {bonusBOnVclick( 1);});
+	$('#home_minusB').live('tap', function( event, ui) {bonusBOnTap( -1);});
+	$('#home_plusB').live('tap', function( event, ui) {bonusBOnTap( 1);});
 
-	var bonusBOnVclick = function( valChange) {
+	var bonusBOnTap = function( valChange) {
 		var kid = getKidData();
 		kid.changePoints( valChange);
 
@@ -416,6 +433,10 @@ $(document).bind('mobileinit', function() {
 
 		setDetailsWidgets();
 	})
+
+	$('#detailspage').live('swiperight', function() {
+		$.mobile.changePage( $('#homepage'));
+	});
 	
 	$('#details_name').live('change', function( event, ui) {
 		var kid = getKidData();
